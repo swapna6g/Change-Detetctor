@@ -1,0 +1,67 @@
+The Simplified Hackathon Build — 20 Steps Only
+
+Block 1 — Setup (1 hour)
+Step 1: Project setup
+Create two folders — backend and frontend. Initialize Flask in backend with a single app.py. Create requirements.txt with Flask, flask-cors, anthropic, python-docx, pdfplumber, openpyxl, and python-pptx. Create .env with your API key placeholder. Create .gitignore adding .env and uploads/ and outputs/. Confirm Flask starts and /health returns OK.
+Step 2: Load your reference files at startup
+At Flask startup load three things into memory — guideline_rules.txt, UCDD_MASTER_PROMPT_LIBRARY.txt, and system_config.json. Parse the prompt library into sections by the === SECTION N === markers. Log confirmation of each loaded. This is the foundation everything else calls from.
+Step 3: Prepare your demo files
+Before writing any more code open the actual PPTX and PDF report files and the actual UCDD Excel file. Confirm you can open them. Save clean copies in a demo_files/ folder. Also prepare a simple admf_lookup.json with just the one Use Case Identifier you will demo. This step is not coding — it is preparation that makes every subsequent step testable.
+
+Block 2 — File Upload (1 hour)
+Step 4: Build the upload endpoint
+Create POST /api/upload that accepts three files — new_report, prior_report, ucdd — plus admf_identifier as a form field. Validate file extensions only — reports accept pdf, docx, pptx, txt and UCDD accepts xlsx, csv. Save files to an uploads/ folder with a timestamp prefix. Return a session_id which is just a timestamp string like 20260406_143022. No complex session management — just a folder named by timestamp.
+Step 5: Build the simple upload UI
+Create a single index.html page. Three file input zones with clear labels — New Report, Prior Report, Existing UCDD. One text field for the Use Case Identifier. A Begin Analysis button that posts to /api/upload. On success redirect to /processing.html?session=SESSIONID. Keep the styling clean but do not spend more than 30 minutes on CSS. Functionality over appearance at this stage.
+
+Block 3 — Document Parsing (1 hour)
+Step 6: Build the document parsers
+Create one parsing function per format. For PPTX iterate slides and extract title plus all text box content. For PDF extract text layer. For DOCX extract paragraphs preserving headings. For XLSX read row by row and convert to a list of dictionaries using the header row as keys. Create a format router function that detects the file extension and calls the right parser. Output from every parser is plain text — no complex objects yet.
+Step 7: Build the placeholder cleaner and structuring call
+After parsing replace all ## and ### with [REDACTED]. Then call Claude once per report with a simple structuring prompt asking it to identify the key sections — Data Elements, Calculations, Business Rules. Store the structured output as a dictionary in memory for the session. This is the only AI call in the parsing phase.
+
+Block 4 — AI Comparison Core (2 hours)
+Step 8: Build the change detection call
+This is the most important step. Call Claude with Section 2 from the prompt library. Send both structured reports. Get back a list of detected changes. Store in memory. This single API call is the heart of your hackathon demo — spend the most time getting the prompt right and the output clean.
+Step 9: Build the impact mapping call
+Call Claude with Section 3. Send the detected changes and the list of UCDE names from the existing UCDD. Get back a disposition for every UCDE — Add, Update, Delete, No Change, or Review Required. Store in memory. Validate that every UCDE received exactly one disposition.
+Step 10: Build the UCDE column population call
+For each UCDE that is not No Change call Claude with the full population prompt from Section 9 of the prompt library. This populates all 12 UCDD columns for that element following the guideline rules. For No Change UCDEs carry forward the existing values. Store all outputs in memory.
+Step 11: Build the materiality assessment call
+For Add, Update, Delete, and Review Required UCDEs call Claude with Section 12. Get back the material Y/N flag, confidence score, rationale, and source evidence. For No Change return N automatically without an API call.
+Step 12: Assemble the Change Matrix
+Combine everything into one list of dictionaries — one per UCDE — with all seven required columns plus confidence and compliance status. Sort Review Required to the top. This is a pure Python operation — no AI call needed.
+
+Block 5 — Output Files (1 hour)
+Step 13: Write the Change Matrix to Excel
+Copy the Change Matrix template into the session outputs folder. Open it with openpyxl. Write each row into the Change Matrix sheet starting at row 2. Write summary counts to the Summary sheet. Save. This is your primary output artifact.
+Step 14: Write the Updated UCDD to Excel
+Copy the UCDD output template into the session outputs folder. Open it with openpyxl. Write only the accepted disposition rows — all rows for now since no reviewer has run yet. Save as WIP. This is your secondary output artifact.
+Step 15: Build the results and download endpoints
+Create GET /api/results/{session_id} that reads the Change Matrix Excel and returns JSON. Create GET /api/download/{session_id}/{type} that serves the Excel file as a download. These two endpoints are all the dashboard needs.
+
+Block 6 — Dashboard (2 hours)
+Step 16: Build a simple but impressive results page
+For the hackathon skip React entirely unless someone on your team knows it well. Build a clean HTML page results.html that fetches from /api/results/{session_id} and renders the Change Matrix as an HTML table. Add five colored count badges at the top — one per disposition. Add color-coded rows — amber for Review Required, green for Add, blue for Update, red for Delete, gray for No Change. Add a confidence percentage column with a simple colored bar. This can be done in vanilla HTML and JavaScript and will look very good with minimal CSS.
+Step 17: Build the reviewer action controls
+Add three buttons to each row — Accept, Modify, Reject. Clicking a button updates that row's visual state locally in the browser. Track how many rows have been actioned in a counter at the bottom. When all rows are actioned the Submit Approval button activates. On click POST the decisions to /api/approve/{session_id}.
+Step 18: Build the approval endpoint
+Create POST /api/approve/{session_id} that receives the reviewer decisions. Rename the output files from WIP to the final date-stamped filename. Update the UCDD to exclude rejected rows. Return the final filenames. Show a completion message on the results page with three download buttons.
+
+Block 7 — Processing Page and Polish (30 minutes)
+Step 19: Build the processing page
+Create processing.html that shows a simple progress message while the backend works. Poll /api/status/{session_id} every 3 seconds. Show a spinner with the message "AI is analyzing your documents." When status is ready redirect to results. This does not need to show individual stages — a single spinner is enough for the demo.
+Step 20: End-to-end test and fix
+Run the complete flow with your actual demo files. Upload both reports and the UCDD. Watch processing complete. Review the results page. Accept all rows. Download the output files. Open them in Excel. Fix anything that is broken. Save the output files as backup demo artifacts.
+
+What You Are Deliberately Skipping
+These are things we designed earlier that you should not build for the hackathon:
+Skipping the routing map JSON — hardcode section references directly.
+Skipping the session metadata JSON — use simple in-memory storage.
+Skipping the Audit Log Excel — mention it exists in the presentation but do not build it.
+Skipping Mode 2 entirely — Mode 1 only.
+Skipping the section structure map generator — let the structuring prompt handle it inline.
+Skipping multi-dimensional element detection — mention as future enhancement.
+Skipping server-side file size validation — trust the client-side check.
+Skipping the ADMF validation endpoint — just accept whatever identifier is typed.
+Skipping session history — single session at a time.

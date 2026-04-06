@@ -1,0 +1,1531 @@
+Here are the ready-to-paste prompts for GitHub Copilot, one per step.
+
+Block 1 — Setup
+Prompt for Step 1: Project setup
+Create a Python Flask project with the following structure:
+
+project-root/
+├── backend/
+│   ├── app.py
+│   ├── requirements.txt
+│   └── .env
+├── frontend/
+│   ├── index.html
+│   ├── processing.html
+│   └── results.html
+├── demo_files/
+├── uploads/
+├── outputs/
+└── .gitignore
+
+In backend/app.py create a Flask application that:
+- Imports Flask, flask-cors, os, dotenv
+- Loads environment variables from .env using load_dotenv()
+- Enables CORS for all routes
+- Has a GET /health route that returns {"status": "ok", 
+  "message": "UCDD Change Detection System is running"}
+- Runs on port 5000 in debug mode when executed directly
+
+In backend/requirements.txt add these dependencies:
+flask
+flask-cors
+python-dotenv
+anthropic
+python-docx
+pdfplumber
+openpyxl
+python-pptx
+pandas
+
+In .env add these placeholders:
+ANTHROPIC_API_KEY=your_api_key_here
+FLASK_ENV=development
+FLASK_PORT=5000
+
+In .gitignore add:
+.env
+uploads/
+outputs/
+__pycache__/
+*.pyc
+.DS_Store
+
+Do not add any other code. Keep it minimal and working.
+
+Prompt for Step 2: Load reference files at startup
+In backend/app.py add a startup configuration loader.
+
+Add these global variables at the top after imports:
+- CONFIG = {}
+- PROMPT_LIBRARY = {}
+- GUIDELINE_RULES = ""
+
+Create a function called load_startup_files() that:
+
+1. Loads backend/config/system_config.json into CONFIG global
+   If file not found log a warning and use these defaults:
+   {
+     "processing_mode": "Mode 1",
+     "mode_2_enabled": False,
+     "batch_size": 50,
+     "confidence_threshold": 55,
+     "early_exit_enabled": False,
+     "max_file_size_mb": 50,
+     "accepted_report_formats": [".pdf",".docx",".doc",
+                                  ".txt",".pptx"],
+     "accepted_ucdd_formats": [".xlsx",".xls",".csv"],
+     "api_model": "claude-sonnet-4-20250514",
+     "api_max_tokens": 4000,
+     "review_required_threshold": 3
+   }
+
+2. Loads backend/prompts/UCDD_MASTER_PROMPT_LIBRARY.txt 
+   into PROMPT_LIBRARY global as a dictionary.
+   Parse the file by splitting on lines that match the 
+   pattern "=== SECTION N ===" where N is any number.
+   Store each section with key "SECTION_N" and value 
+   being all text until the next section marker.
+   Strip leading and trailing whitespace from each section.
+
+3. Loads backend/prompts/guideline_rules.txt into 
+   GUIDELINE_RULES global as a plain string.
+   If file not found log a warning and set to empty string.
+
+4. Logs to console:
+   - "Config loaded: {len(CONFIG)} parameters"
+   - "Prompt library loaded: {len(PROMPT_LIBRARY)} sections"
+   - "Guideline rules loaded: {len(GUIDELINE_RULES)} characters"
+
+Call load_startup_files() immediately after the Flask 
+app is created, before any routes are defined.
+
+Create the folder backend/config/ and backend/prompts/ 
+if they do not exist.
+
+Prompt for Step 3: Prepare demo files — config only
+Create the following JSON files for the project:
+
+1. Create backend/config/system_config.json with this content:
+{
+  "processing_mode": "Mode 1",
+  "mode_2_enabled": false,
+  "batch_size": 50,
+  "confidence_threshold": 55,
+  "early_exit_enabled": false,
+  "early_exit_similarity_threshold": 0.95,
+  "max_file_size_mb": 50,
+  "accepted_report_formats": [".pdf",".docx",".doc",
+                               ".txt",".pptx"],
+  "accepted_ucdd_formats": [".xlsx",".xls",".csv"],
+  "api_model": "claude-sonnet-4-20250514",
+  "api_max_tokens": 4000,
+  "review_required_threshold": 3,
+  "output_naming_suffix": "WIP"
+}
+
+2. Create backend/config/admf_lookup.json with this content:
+{
+  "APM0004862": "Conduct Management - All Allegations",
+  "APM0004438": "Conduct Management - Whistleblower"
+}
+
+3. Create backend/config/dq_check_validation.json with 
+   this content:
+{
+  "valid_accuracy_checks": [1,2,3,4,5,6,7,8,9,10,11,12],
+  "valid_accuracy_check_names": {
+    "1": "Accuracy Check Against Master Data",
+    "2": "Valid Value Check",
+    "3": "Valid Date Check",
+    "4": "Date Range Check",
+    "5": "Numeric Range Check",
+    "6": "Duplicate Value Check",
+    "7": "Data Format / Layout Check",
+    "8": "Data Length / # of Characters Check",
+    "9": "Data Precision / Decimal Places Check",
+    "10": "Invalid Characters Check",
+    "11": "Business Logic / Rule Driven Content",
+    "12": "Conditional Field / Value Check"
+  },
+  "valid_completeness_checks": [
+    "Missing / Blank Value Check",
+    "Conditional Field / Value Check",
+    "Business Logic / Rule Driven Content",
+    "N/A"
+  ],
+  "valid_timeliness_checks": [
+    "Data Delivery Check",
+    "N/A"
+  ]
+}
+
+4. Create backend/config/prompt_routing_map.json with 
+   this content:
+{
+  "Mode 1": {
+    "system_context": "SECTION_0",
+    "metadata": "SECTION_4",
+    "change_detection": "SECTION_2",
+    "impact_mapping": "SECTION_3",
+    "column_1": "SECTION_5",
+    "column_2": "SECTION_6",
+    "columns_3_4": "SECTION_7",
+    "column_5": "SECTION_8",
+    "columns_6_7_8": "SECTION_9",
+    "columns_9_10": "SECTION_10",
+    "columns_11_12": "SECTION_11",
+    "row_assembly": "SECTION_12",
+    "matrix_assembly": "SECTION_13",
+    "multidimensional": "SECTION_14"
+  }
+}
+
+Do not modify any Python files in this step.
+
+Block 2 — File Upload
+Prompt for Step 4: Build the upload endpoint
+In backend/app.py add the following:
+
+1. Add these imports at the top:
+   from flask import request, jsonify
+   import os
+   import uuid
+   from datetime import datetime
+   import json
+
+2. Create a helper function get_session_id() that:
+   Returns a timestamp string in format YYYYMMDD_HHMMSS
+   Example: "20260406_143022"
+
+3. Create a helper function allowed_file(filename, 
+   file_type) where file_type is "report" or "ucdd":
+   For "report": check extension is in 
+   [".pdf",".docx",".doc",".txt",".pptx"]
+   For "ucdd": check extension is in 
+   [".xlsx",".xls",".csv"]
+   Return True if allowed, False if not
+   Use CONFIG["accepted_report_formats"] and 
+   CONFIG["accepted_ucdd_formats"] for the lists
+
+4. Create POST /api/upload route that:
+   a. Reads three files from request.files:
+      - new_report
+      - prior_report  
+      - ucdd
+   b. Reads admf_identifier from request.form
+   c. Reads processing_mode from request.form 
+      (default to "Mode 1" if missing)
+   d. Returns 400 JSON error if any of the three files 
+      are missing:
+      {"error": "Missing file: new_report"}
+   e. Validates each file extension using allowed_file():
+      Returns 400 if invalid:
+      {"error": "Invalid file type for new_report. 
+       Accepted: .pdf .docx .doc .txt .pptx"}
+   f. Generates a session_id using get_session_id()
+   g. Creates folder: uploads/{session_id}/
+   h. Saves all three files into that folder with their 
+      original filenames
+   i. Creates a session metadata dict:
+      {
+        "session_id": session_id,
+        "admf_identifier": admf_identifier,
+        "use_case_name": looked up from admf_lookup.json
+                         or "Unknown" if not found,
+        "processing_mode": processing_mode,
+        "uploaded_at": current ISO timestamp,
+        "status": "uploaded",
+        "current_stage": "Uploaded",
+        "files": {
+          "new_report": filename,
+          "prior_report": filename,
+          "ucdd": filename
+        }
+      }
+   j. Saves metadata as uploads/{session_id}/session.json
+   k. Creates folder: outputs/{session_id}/
+   l. Returns 200:
+      {
+        "session_id": session_id,
+        "status": "uploaded",
+        "use_case_name": use_case_name
+      }
+   m. Wraps everything in try/except returning 500 on error
+
+5. Create GET /api/status/{session_id} route that:
+   Reads uploads/{session_id}/session.json
+   Returns the full JSON content
+   Returns 404 if session not found
+
+6. Create a helper function update_session_status(
+   session_id, status, stage) that:
+   Reads the session.json file
+   Updates "status" and "current_stage" fields
+   Writes the file back
+   This will be called throughout the pipeline
+
+Prompt for Step 5: Build the upload UI
+Create frontend/index.html as a complete single-file 
+HTML page with embedded CSS and JavaScript.
+
+The page must have:
+
+HEADER:
+- Title: "AI-Powered UCDE Change Detection & 
+  Governance Framework"
+- Subtitle: "Submit your documents to begin 
+  automated analysis"
+
+THREE UPLOAD ZONES displayed side by side in a grid:
+Zone 1 - Label: "New Use Case Report"
+         Hint: "Accepts: .pdf .pptx .docx .txt"
+         Badge: "Required" in coral/red color
+         
+Zone 2 - Label: "Prior Approved Report"  
+         Hint: "Accepts: .pdf .pptx .docx .txt"
+         Badge: "Required" in coral/red color
+         
+Zone 3 - Label: "Existing UCDD"
+         Hint: "Accepts: .xlsx .csv"
+         Badge: "Required" in coral/red color
+
+Each zone:
+- Has a dashed border that turns solid green when 
+  a file is selected
+- Shows the selected filename when a file is chosen
+- Has a hidden file input triggered by clicking the zone
+- Shows an upload icon (use a simple SVG arrow up icon)
+
+BELOW THE ZONES:
+- Text input labeled "Use Case Identifier (ADMF)"
+  Placeholder: "e.g. APM0004862"
+- Status bar: "0 of 3 documents uploaded"
+  Shows a colored dot — amber when incomplete, 
+  green when all uploaded
+
+BUTTON:
+- "Begin Analysis" button
+- Disabled and gray until all 3 files selected 
+  AND identifier field has a value
+- Green and active when all conditions are met
+
+JAVASCRIPT behavior:
+- Each zone click triggers its hidden file input
+- On file selection update zone visual state 
+  and show filename
+- Update status bar count on each file selection
+- Activate button only when 3 files selected 
+  AND identifier entered
+- On button click:
+  * Disable button and show "Uploading..."
+  * Create FormData with all 3 files and identifier
+  * Add processing_mode field with value "Mode 1"
+  * POST to http://localhost:5000/api/upload
+  * On success redirect to: 
+    /frontend/processing.html?session={session_id}
+  * On error show error message below the button
+
+CSS styling:
+- Clean white background
+- Cards with subtle borders and border-radius 12px
+- Green color: #1D9E75
+- Required badge: coral background #FAECE7 
+  text #712B13
+- Font: system-ui sans-serif
+- Mobile responsive — stack zones vertically 
+  on small screens
+
+Do not use any external CSS frameworks or libraries.
+Keep all CSS and JavaScript inside the single HTML file.
+
+Block 3 — Document Parsing
+Prompt for Step 6: Build the document parsers
+Create a new file backend/parsers.py with the following 
+parsing functions:
+
+1. parse_pdf(filepath) -> str:
+   Use pdfplumber to open the PDF.
+   Extract text from every page.
+   Join pages with double newline separator.
+   If extracted text is empty or under 100 characters
+   return a dict: 
+   {"error": "scanned_pdf", "text": ""}
+   On success return: {"error": None, "text": full_text}
+   Wrap in try/except returning error dict on failure.
+
+2. parse_pptx(filepath) -> dict:
+   Use python-pptx to open the file.
+   Iterate through all slides in order.
+   For each slide:
+     - Get the slide title if it exists and mark it as:
+       "=== SLIDE {number}: {title} ==="
+     - Extract text from all shapes that have text frames
+     - For tables on the slide extract each row as 
+       pipe-separated values: "col1 | col2 | col3"
+   Join all content with newlines.
+   Return: {"error": None, "text": full_text}
+   Wrap in try/except returning error dict on failure.
+
+3. parse_docx(filepath) -> dict:
+   Use python-docx to open the file.
+   Iterate through all paragraphs.
+   For paragraphs with heading style prefix with "## "
+   For regular paragraphs use text as-is.
+   Skip empty paragraphs.
+   Join with newlines.
+   Return: {"error": None, "text": full_text}
+   Wrap in try/except returning error dict on failure.
+
+4. parse_ucdd_excel(filepath) -> dict:
+   Use openpyxl to open the file.
+   Try to find a sheet named "Use Case Dictionary"
+   If not found use the first sheet.
+   Read row 1 and row 2 to extract Use Case Identifier
+   and Use Case Name from the merged header area.
+   Read row 4 as the column headers list.
+   Read all rows from row 10 onwards as data rows.
+   Skip completely empty rows.
+   Convert each data row to a dictionary using 
+   column headers as keys.
+   Return:
+   {
+     "error": None,
+     "use_case_identifier": value or "",
+     "use_case_name": value or "",
+     "ucde_rows": [list of row dictionaries],
+     "column_headers": [list of header strings]
+   }
+   Wrap in try/except returning error dict on failure.
+
+5. parse_document(filepath, doc_type) -> dict:
+   doc_type is "report" or "ucdd"
+   Get file extension from filepath (lowercase).
+   If doc_type is "ucdd": call parse_ucdd_excel()
+   If extension is ".pdf": call parse_pdf()
+   If extension is ".pptx": call parse_pptx()
+   If extension in [".docx", ".doc"]: call parse_docx()
+   If extension is ".txt": read file directly as text
+     and return {"error": None, "text": content}
+   If extension not recognized return:
+   {"error": "unsupported_format", "text": ""}
+
+6. clean_placeholders(text) -> tuple:
+   Use re.sub to replace all occurrences of 
+   ##+ (two or more hash symbols followed by 
+   optional digits) with "[REDACTED]"
+   Return tuple: (cleaned_text, replacement_count)
+   Import re at the top of the file.
+
+Add this import at the top:
+import re
+import pdfplumber
+from pptx import Presentation
+from pptx.util import Inches
+import docx
+import openpyxl
+from pathlib import Path
+
+Prompt for Step 7: Build the placeholder cleaner and structuring call
+In backend/app.py add the following after the upload 
+endpoint:
+
+1. Add import at the top:
+   from parsers import parse_document, clean_placeholders
+   import anthropic
+
+2. Create a function call_claude(prompt_text, 
+   session_id="") -> dict:
+   - Create an Anthropic client using the API key 
+     from environment variable ANTHROPIC_API_KEY
+   - Call client.messages.create() with:
+     model from CONFIG["api_model"]
+     max_tokens from CONFIG["api_max_tokens"]
+     messages=[{"role": "user", "content": prompt_text}]
+   - Extract the text from response.content[0].text
+   - Try to parse the text as JSON after stripping 
+     any markdown code fences (lines with ```)
+   - If JSON parsing succeeds return 
+     {"success": True, "data": parsed_json}
+   - If JSON parsing fails return 
+     {"success": False, "raw": text, 
+      "error": "json_parse_failed"}
+   - Wrap everything in try/except returning
+     {"success": False, "error": str(e)} on failure
+
+3. Create a function get_prompt_section(section_key) 
+   -> str:
+   Look up section_key in the global PROMPT_LIBRARY dict
+   Return the section text or empty string if not found
+   Section keys are like "SECTION_0", "SECTION_2" etc.
+
+4. Create a function structure_document(
+   parsed_text, doc_label, session_id) -> dict:
+   Build a prompt string that contains:
+   - The system context from SECTION_0 of prompt library
+   - This instruction:
+     "You are analyzing a use case report document.
+     Read the following document text and organize 
+     it into these labeled sections:
+     1. Background and Purpose
+     2. Data Elements (list every data element mentioned)
+     3. Calculations and Business Logic
+     4. Report Outputs
+     5. Data Sources
+     6. Business Rules and Governance
+     
+     Return ONLY a JSON object with these exact keys:
+     background, data_elements, calculations, 
+     outputs, data_sources, business_rules
+     
+     Each value should be the relevant extracted text.
+     If a section is not present use empty string.
+     Do not include any text outside the JSON object."
+   - Then append: "DOCUMENT TEXT:\n" + parsed_text
+   
+   Call call_claude() with this prompt
+   Return the result dict
+
+5. Create POST /api/process/{session_id} route that:
+   a. Reads session.json to get file paths
+   b. Calls parse_document() for each of the 3 files
+   c. Calls clean_placeholders() on each text result
+   d. Calls structure_document() for new_report 
+      and prior_report
+   e. Saves all results to session folder:
+      - uploads/{session_id}/new_report_parsed.txt
+      - uploads/{session_id}/prior_report_parsed.txt  
+      - uploads/{session_id}/new_report_structured.json
+      - uploads/{session_id}/prior_report_structured.json
+      - uploads/{session_id}/ucdd_parsed.json
+   f. Validates that data_elements section is not 
+      empty in both structured reports
+      If empty update session status to "failed" 
+      with reason and return 422
+   g. Updates session status to "parsed"
+   h. Returns {"status": "parsed", 
+               "session_id": session_id}
+   i. Wrap in try/except returning 500 on error
+
+This route will be called by the processing page 
+immediately after redirect.
+
+Block 4 — AI Comparison Core
+Prompt for Step 8: Build the change detection call
+In backend/app.py add a function detect_changes(
+session_id) -> dict:
+
+This function:
+
+1. Reads these files from the session folder:
+   - uploads/{session_id}/new_report_structured.json
+   - uploads/{session_id}/prior_report_structured.json
+   - uploads/{session_id}/ucdd_parsed.json
+
+2. Calls update_session_status(session_id, 
+   "processing", "Detecting Changes")
+
+3. Builds a prompt that includes:
+   - Section 0 system context from PROMPT_LIBRARY
+   - Section 2 change detection content from 
+     PROMPT_LIBRARY (get using get_prompt_section())
+   - Then appends:
+   
+   "PRIOR APPROVED REPORT CONTENT:
+   Background: {prior structured background}
+   Data Elements: {prior structured data elements}
+   Calculations: {prior structured calculations}
+   Business Rules: {prior structured business rules}
+   
+   NEW SUBMITTED REPORT CONTENT:
+   Background: {new structured background}
+   Data Elements: {new structured data elements}
+   Calculations: {new structured calculations}
+   Business Rules: {new structured business rules}
+   
+   Identify every meaningful change between these 
+   two report versions.
+   
+   Return ONLY a JSON object with this structure:
+   {
+     'early_exit': false,
+     'early_exit_reason': '',
+     'changes': [
+       {
+         'change_id': 1,
+         'change_type': 'element_name or definition 
+                         or calculation or business_rule 
+                         or scope or structure',
+         'prior_value': 'what it was before',
+         'new_value': 'what it is now',
+         'source_section': 'which section this is from',
+         'change_description': 'plain English explanation',
+         'confidence': 85
+       }
+     ],
+     'total_changes': 0
+   }
+   
+   If the documents are effectively identical set 
+   early_exit to true and changes to empty array.
+   Do not include any text outside the JSON object."
+
+4. Calls call_claude() with this prompt
+
+5. If call_claude returns success:
+   - Saves result to uploads/{session_id}/
+     detected_changes.json
+   - Calls update_session_status with "processing", 
+     "Mapping to UCDEs"
+   - Returns the changes data
+
+6. If call_claude returns failure:
+   - Updates session status to "failed"
+   - Returns error dict
+
+Wrap entire function in try/except.
+
+Prompt for Step 9: Build the impact mapping call
+In backend/app.py add a function map_to_ucdes(
+session_id) -> dict:
+
+This function:
+
+1. Reads these files:
+   - uploads/{session_id}/detected_changes.json
+   - uploads/{session_id}/ucdd_parsed.json
+
+2. Extracts the list of existing UCDE names from 
+   ucdd_parsed["ucde_rows"] - get the 
+   "Use Case Element Name" field from each row
+
+3. If detected_changes["early_exit"] is True:
+   Create a disposition for every UCDE as No Change
+   Save to uploads/{session_id}/disposition_mapping.json
+   Update session status to "processing", 
+   "Assessing Dispositions"
+   Return the no-change disposition mapping
+
+4. Builds a prompt that includes:
+   - Section 0 from PROMPT_LIBRARY
+   - Section 3 from PROMPT_LIBRARY  
+   - Then appends:
+   
+   "DETECTED CHANGES FROM REPORT COMPARISON:
+   {json.dumps(detected_changes['changes'], indent=2)}
+   
+   EXISTING UCDE LIST FROM CURRENT UCDD:
+   {json.dumps(ucde_name_list, indent=2)}
+   
+   For every UCDE in the existing list assign exactly 
+   one disposition based on the detected changes.
+   
+   Return ONLY a JSON object with this structure:
+   {
+     'dispositions': [
+       {
+         'ucde_name': 'exact name from existing list',
+         'disposition': 'Add or Update or Delete or 
+                         No Change or Review Required',
+         'change_id_reference': 1,
+         'impact_description': 'why this disposition',
+         'confidence': 85,
+         'review_required': false,
+         'review_reason': ''
+       }
+     ],
+     'summary': {
+       'total': 0,
+       'add': 0,
+       'update': 0,
+       'delete': 0,
+       'no_change': 0,
+       'review_required': 0
+     }
+   }
+   
+   Every UCDE must appear exactly once in dispositions.
+   Total must equal {len(ucde_name_list)}.
+   Do not include any text outside the JSON object."
+
+5. Calls call_claude() with this prompt
+
+6. Validates the response:
+   - Checks that len(dispositions) equals 
+     len(ucde_name_list)
+   - If counts do not match log a warning
+
+7. Saves result to uploads/{session_id}/
+   disposition_mapping.json
+
+8. Updates session status to "processing", 
+   "Populating UCDD Fields"
+
+9. Returns the disposition mapping
+
+Wrap in try/except returning error dict on failure.
+
+Prompt for Step 10: Build the UCDE column population call
+In backend/app.py add a function populate_ucde_fields(
+session_id) -> list:
+
+This function:
+
+1. Reads:
+   - uploads/{session_id}/disposition_mapping.json
+   - uploads/{session_id}/ucdd_parsed.json
+   - uploads/{session_id}/new_report_structured.json
+
+2. Creates a dict of existing UCDE rows keyed by 
+   "Use Case Element Name" for fast lookup
+
+3. Creates an empty list called all_ucde_outputs
+
+4. For each UCDE in disposition_mapping["dispositions"]:
+
+   a. Gets the existing UCDE row from ucdd_parsed 
+      if it exists (for carry-forward)
+   
+   b. If disposition is "No Change":
+      - Create output object carrying forward all 
+        existing column values unchanged
+      - Set "carried_forward": True
+      - Append to all_ucde_outputs and continue
+   
+   c. For Add, Update, Delete, Review Required:
+      Build a prompt containing:
+      - Section 0 from PROMPT_LIBRARY
+      - Section 9 from PROMPT_LIBRARY (full population)
+      - Then append:
+      
+      "CURRENT TASK:
+      Processing Mode: Mode 1
+      UCDE Name: {ucde_name}
+      Disposition: {disposition}
+      Impact Description: {impact_description}
+      
+      EXISTING UCDE VALUES (for Update - 
+      only change affected fields):
+      {json.dumps(existing_row, indent=2)}
+      
+      GUIDELINE RULES:
+      {GUIDELINE_RULES}
+      
+      SOURCE EVIDENCE FROM NEW REPORT:
+      Data Elements Section: {new_structured data_elements}
+      Calculations Section: {new_structured calculations}
+      Business Rules Section: {new_structured business_rules}
+      
+      Populate all 12 UCDD columns for this UCDE 
+      following the guideline rules exactly.
+      For Update disposition carry forward unchanged 
+      fields from existing values.
+      
+      Return ONLY a JSON object with these exact keys
+      matching the UCDD column names:
+      {
+        'Use Case Element Name': '',
+        'Use Case Element Description': '',
+        '*Use Case Hierarchy Level 1': '',
+        '*Use Case Hierarchy Level 2': '',
+        'MDR M': '',
+        'Accuracy Dimension': '',
+        'Accuracy Dimension [MULTI]': '',
+        'Accuracy Dimension N/A Justification': '',
+        'Completeness Dimension': '',
+        'Completeness Dimension N/A Justification': '',
+        'Timeliness Dimension': '',
+        'Timeliness Dimension N/A Justification': '',
+        'disposition': '{disposition}',
+        'carried_forward': false,
+        'confidence': 0,
+        'review_required': false,
+        'review_reason': '',
+        'compliance_flags': []
+      }
+      Do not include any text outside the JSON object."
+      
+   d. Calls call_claude() with this prompt
+   
+   e. If success: merges disposition info into the 
+      returned data object and appends to all_ucde_outputs
+   
+   f. If failure: creates a Review Required entry 
+      with the error as review_reason
+
+5. Saves all_ucde_outputs as a list to:
+   uploads/{session_id}/ucde_outputs.json
+
+6. Updates session status to "processing", 
+   "Assessing Materiality"
+
+7. Returns all_ucde_outputs
+
+Wrap in try/except returning empty list on failure.
+
+Prompt for Step 11: Build the materiality assessment call
+In backend/app.py add a function assess_materiality(
+session_id, ucde_outputs) -> list:
+
+This function:
+
+1. Reads uploads/{session_id}/
+   new_report_structured.json for source evidence
+
+2. For each UCDE in ucde_outputs:
+
+   a. If disposition is "No Change":
+      Add these fields to the UCDE dict:
+      "material_change": "N"
+      "confidence_score": 95
+      "materiality_rationale": "No change detected 
+       between report versions"
+      "source_evidence": "N/A - No change"
+      Continue to next UCDE (no API call)
+
+   b. For Add, Update, Delete, Review Required:
+      Build a prompt:
+      
+      "Assess the materiality of this UCDE change 
+      for governance review purposes.
+      
+      UCDE Name: {ucde_name}
+      Disposition: {disposition}
+      Change Description: {impact_description}
+      Confidence Score: {confidence}
+      
+      Use Case Element Description:
+      {Use Case Element Description from ucde output}
+      
+      SOURCE CONTENT FROM NEW REPORT:
+      {new_structured data_elements section}
+      
+      Assess materiality using this formula:
+      - Semantic similarity delta: 40% weight
+        (how different is this element between versions)
+      - Number of report sections impacted: 30% weight
+        (1 section = lower score, 3+ sections = higher)
+      - Sensitivity of section: 30% weight
+        (calculations/regulatory = high sensitivity,
+         narrative/background = low sensitivity)
+      
+      Return ONLY a JSON object:
+      {
+        'material_change': 'Y or N',
+        'confidence_score': 0-100,
+        'materiality_rationale': 'plain English 
+         explanation of why material or not',
+        'source_evidence': 'specific section and 
+         text from report that triggered this'
+      }
+      Do not include any text outside the JSON."
+      
+   c. Calls call_claude() with this prompt
+   
+   d. If success: merges materiality fields into 
+      the UCDE dict
+   
+   e. If failure: sets material_change to "Y" 
+      (err on side of caution), confidence_score 
+      to 30, and review_required to True
+
+3. Saves the enriched ucde_outputs back to:
+   uploads/{session_id}/ucde_outputs.json
+
+4. Updates session status to "processing", 
+   "Generating Outputs"
+
+5. Returns the enriched ucde_outputs list
+
+Wrap in try/except.
+
+Prompt for Step 12: Assemble the Change Matrix
+In backend/app.py add a function 
+assemble_change_matrix(session_id, ucde_outputs) -> dict:
+
+This function does NOT call the Claude API.
+It is pure Python logic.
+
+1. Define this sort priority for dispositions:
+   "Review Required" = 1 (first)
+   "Add" = 2
+   "Update" = 3
+   "Delete" = 4
+   "No Change" = 5 (last)
+
+2. Sort ucde_outputs by:
+   Primary: disposition priority (ascending)
+   Secondary: confidence_score (ascending - 
+   lowest confidence first within each group)
+
+3. Build a summary dict:
+   {
+     "total_ucdes": len(ucde_outputs),
+     "total_add": count of Add,
+     "total_update": count of Update,
+     "total_delete": count of Delete,
+     "total_no_change": count of No Change,
+     "total_review_required": count of Review Required,
+     "total_material_y": count where material_change = Y,
+     "average_confidence": average of all confidence_scores
+   }
+
+4. Build a change_matrix list where each item is:
+   {
+     "ucde_name": from "Use Case Element Name",
+     "disposition": disposition value,
+     "change_summary": impact_description,
+     "material_change": material_change Y/N,
+     "confidence_score": confidence_score,
+     "materiality_rationale": materiality_rationale,
+     "source_evidence": source_evidence,
+     "policy_compliance_status": 
+       "Needs Review" if review_required is True
+       else "Compliant",
+     "compliance_flags": compliance_flags list,
+     "review_required": review_required boolean,
+     "all_columns": the full UCDE output dict 
+       (for the detail panel)
+   }
+
+5. Build the full matrix object:
+   {
+     "session_id": session_id,
+     "use_case_identifier": from ucdd_parsed,
+     "use_case_name": from session metadata,
+     "generated_at": current ISO timestamp,
+     "summary": summary dict,
+     "change_matrix": sorted change_matrix list
+   }
+
+6. Saves to uploads/{session_id}/change_matrix.json
+
+7. Updates session status to "ready_for_review", 
+   "Analysis Complete"
+
+8. Returns the full matrix object
+
+No API calls in this function. Wrap in try/except.
+
+Block 5 — Output Files
+Prompt for Step 13: Write the Change Matrix to Excel
+In backend/app.py add a function 
+write_change_matrix_excel(session_id) -> str:
+
+This function:
+
+1. Reads uploads/{session_id}/change_matrix.json
+
+2. Checks if backend/templates/
+   CHANGE_MATRIX_TEMPLATE.xlsx exists
+   If it exists: copy it to outputs/{session_id}/
+   {session_id}_CHANGE_MATRIX_WIP.xlsx
+   If it does not exist: create a new workbook with 
+   openpyxl instead
+
+3. Opens the copied/created file with openpyxl 
+   load_workbook()
+
+4. Gets or creates a sheet named "Change Matrix"
+
+5. If the sheet is empty (no headers yet):
+   Write these headers in row 1 with bold font 
+   and dark background (#1F3864) white text:
+   A: UCDE Name
+   B: Disposition
+   C: Change Summary
+   D: Material Change (Y/N)
+   E: Confidence Score (%)
+   F: Materiality Rationale
+   G: Source Evidence
+   H: Policy Compliance Status
+   I: Review Required (Y/N)
+   J: Compliance Flags
+
+6. Write each row from change_matrix list 
+   starting at row 2:
+   A: ucde_name
+   B: disposition
+   C: change_summary (truncate to 500 chars)
+   D: material_change
+   E: confidence_score
+   F: materiality_rationale (truncate to 500 chars)
+   G: source_evidence (truncate to 300 chars)
+   H: policy_compliance_status
+   I: "Y" if review_required else "N"
+   J: str(compliance_flags) truncated to 200 chars
+
+7. Apply cell background colors to column B 
+   based on disposition value:
+   "Add" -> PatternFill with #EAF3DE (light green)
+   "Update" -> PatternFill with #E6F1FB (light blue)
+   "Delete" -> PatternFill with #FCEBEB (light red)
+   "No Change" -> PatternFill with #F1EFE8 (light gray)
+   "Review Required" -> PatternFill with #FAEEDA (amber)
+
+8. Gets or creates a sheet named "Summary"
+   Write these label-value pairs:
+   Row 2: "Use Case Identifier" | identifier value
+   Row 3: "Use Case Name" | name value
+   Row 4: "Generated At" | timestamp
+   Row 5: "Total UCDEs" | total count
+   Row 6: "Add" | add count
+   Row 7: "Update" | update count
+   Row 8: "Delete" | delete count
+   Row 9: "No Change" | no_change count
+   Row 10: "Review Required" | review_required count
+   Row 11: "Material Changes (Y)" | material_y count
+   Row 12: "Average Confidence" | avg confidence %
+
+9. Saves the workbook
+
+10. Returns the filepath of the saved file
+
+Import at top of file:
+from openpyxl.styles import PatternFill, Font, 
+Alignment
+import shutil
+from datetime import datetime
+
+Prompt for Step 14: Write the Updated UCDD to Excel
+In backend/app.py add a function 
+write_ucdd_excel(session_id) -> str:
+
+This function:
+
+1. Reads uploads/{session_id}/ucde_outputs.json
+2. Reads uploads/{session_id}/session.json for metadata
+
+3. Checks if backend/templates/
+   UCDD_OUTPUT_TEMPLATE.xlsx exists
+   If yes: copy to outputs/{session_id}/
+   {session_id}_UCDD_WIP.xlsx
+   If no: create a new workbook with openpyxl
+
+4. Opens the file with openpyxl
+
+5. Gets or creates sheet "Use Case Dictionary"
+
+6. If sheet has no headers write these in row 4 
+   with bold dark header styling:
+   A: Use Case Element Name
+   B: Use Case Element Description
+   C: *Use Case Hierarchy Level 1
+   D: *Use Case Hierarchy Level 2
+   E: MDR M
+   F: Accuracy Dimension
+   G: Accuracy Dimension [MULTI]
+   H: Accuracy Dimension N/A Justification
+   I: Completeness Dimension
+   J: Completeness Dimension N/A Justification
+   K: Timeliness Dimension
+   L: Timeliness Dimension N/A Justification
+
+7. Write metadata in rows 1 and 2:
+   Row 1 col A: "Use Case Identifier"
+   Row 1 col C: identifier value from session
+   Row 2 col A: "Use Case Name"  
+   Row 2 col C: use_case_name from session
+
+8. Write each UCDE from ucde_outputs starting 
+   at row 10 mapping each field to its exact 
+   column position by column name:
+   A: "Use Case Element Name"
+   B: "Use Case Element Description"
+   C: "*Use Case Hierarchy Level 1"
+   D: "*Use Case Hierarchy Level 2"
+   E: "MDR M"
+   F: "Accuracy Dimension"
+   G: "Accuracy Dimension [MULTI]"
+   H: "Accuracy Dimension N/A Justification"
+   I: "Completeness Dimension"
+   J: "Completeness Dimension N/A Justification"
+   K: "Timeliness Dimension"
+   L: "Timeliness Dimension N/A Justification"
+
+9. Gets or creates sheet "Version History"
+   Write headers if not present:
+   Version | Date | Modified By | Change Description | 
+   Status
+   Write one data row:
+   "v1-WIP" | today's date | 
+   "AI-Powered UCDE Change Detection System" | 
+   "Automated analysis - pending human review" | 
+   "WIP"
+
+10. Saves the workbook
+
+11. Returns the filepath
+
+Wrap in try/except returning error string on failure.
+
+Prompt for Step 15: Build results and download endpoints
+In backend/app.py add the following three endpoints:
+
+1. GET /api/results/{session_id}:
+   a. Reads uploads/{session_id}/change_matrix.json
+   b. Returns the full JSON content as response
+   c. Returns 404 if file not found
+   d. Returns 500 on other errors
+
+2. GET /api/download/{session_id}/{file_type}:
+   file_type is one of: change_matrix, ucdd, audit_log
+   
+   Build the filepath based on file_type:
+   change_matrix -> outputs/{session_id}/
+                    {session_id}_CHANGE_MATRIX_WIP.xlsx
+   ucdd ->          outputs/{session_id}/
+                    {session_id}_UCDD_WIP.xlsx
+   audit_log ->     outputs/{session_id}/
+                    {session_id}_AUDIT_LOG_WIP.xlsx
+   
+   If file does not exist return 404:
+   {"error": "File not found. Processing may not 
+    be complete."}
+   
+   Use Flask send_file() to return the file as 
+   a downloadable attachment.
+   Set as_attachment=True and download_name to 
+   the filename.
+   
+   Add this import at top:
+   from flask import send_file
+
+3. GET /api/config:
+   Returns a safe subset of CONFIG:
+   {
+     "mode_2_enabled": CONFIG value,
+     "accepted_report_formats": CONFIG value,
+     "accepted_ucdd_formats": CONFIG value,
+     "max_file_size_mb": CONFIG value
+   }
+
+4. GET /api/admf/{identifier}:
+   Load backend/config/admf_lookup.json
+   Look up the identifier
+   If found return: 
+   {"found": True, "use_case_name": name}
+   If not found return:
+   {"found": False, "use_case_name": "Unknown"}
+
+5. Create a master POST /api/run/{session_id} 
+   endpoint that runs the complete pipeline in 
+   sequence:
+   a. Call update_session_status("processing", 
+      "Parsing Documents")
+   b. Call the parsing logic from /api/process
+      (refactor that code into a function 
+      run_parsing(session_id) -> bool)
+   c. If parsing fails return 422 with error
+   d. Call detect_changes(session_id)
+   e. Call map_to_ucdes(session_id)
+   f. Call populate_ucde_fields(session_id)
+   g. Call assess_materiality(session_id, outputs)
+   h. Call assemble_change_matrix(session_id, outputs)
+   i. Call write_change_matrix_excel(session_id)
+   j. Call write_ucdd_excel(session_id)
+   k. Return {"status": "ready_for_review", 
+              "session_id": session_id}
+   
+   This single endpoint is called by the processing 
+   page to run everything.
+   Wrap in try/except updating status to "failed" 
+   and returning 500 on any unhandled error.
+
+Block 6 — Dashboard
+Prompt for Step 16: Build the results page
+Create frontend/results.html as a complete single-file 
+HTML page with embedded CSS and JavaScript.
+
+The page reads the session_id from the URL query 
+parameter ?session=SESSION_ID
+
+HEADER SECTION:
+- Application title
+- Use Case name and identifier (populated from API)
+- Three download buttons (right-aligned):
+  "Download Change Matrix" 
+  "Download Updated UCDD"
+  Both call /api/download/{session_id}/change_matrix 
+  and /api/download/{session_id}/ucdd
+
+SUMMARY BAR (5 colored stat cards in a row):
+Show counts for each disposition type.
+Colors:
+- Add: green background #EAF3DE text #27500A
+- Update: blue background #E6F1FB text #0C447C
+- Delete: red background #FCEBEB text #712B13
+- No Change: gray background #F1EFE8 text #444441
+- Review Required: amber background #FAEEDA text #633806
+Also show:
+- Material Changes (Y) count in coral
+- Average Confidence % in purple
+
+FILTER BAR:
+Six toggle buttons for filtering the table:
+All | Add | Update | Delete | No Change | 
+Review Required
+Active filter has solid background.
+Inactive filter has border only.
+Clicking a filter shows only rows with that disposition.
+"All" shows all rows.
+
+CHANGE MATRIX TABLE:
+Columns: UCDE Name | Disposition | Material | 
+         Confidence | Change Summary | Review
+         
+Each row:
+- Disposition shown as a colored badge
+- Material Change shown as Y (red bold) or N (green)
+- Confidence shown as a colored number:
+  below 55 = red, 55-79 = amber, 80+ = green
+- Review Required rows have amber left border
+- Clicking a row opens the detail panel
+
+DETAIL PANEL (slides in from right on row click):
+Shows all information for the selected UCDE:
+- UCDE name as heading
+- Disposition badge
+- All 12 UCDD column values in a clean list
+- Confidence score with breakdown
+- Materiality rationale
+- Source evidence
+- Compliance flags if any
+- Three action buttons: Accept | Modify | Reject
+- Close button (X) to dismiss panel
+
+PROGRESS FOOTER (sticky at bottom):
+"0 of 6 UCDEs reviewed"
+Progress bar showing completion
+"Submit for Approval" button — disabled until all done
+
+JAVASCRIPT behavior:
+1. On page load:
+   - Read session_id from URL params
+   - Fetch GET /api/results/{session_id}
+   - Populate summary bar from response.summary
+   - Populate table from response.change_matrix
+   - Store full response in a JS variable
+
+2. Filter buttons:
+   - Track active filter in a variable
+   - On filter click filter table rows by disposition
+   - Update filter button active states
+
+3. Row click:
+   - Populate detail panel with clicked row data
+   - Show panel by adding a CSS class
+
+4. Reviewer actions:
+   - Accept: mark row with green checkmark, 
+     store decision
+   - Reject: mark row with red X, store decision
+   - Modify: (for now just Accept with a note —
+     full inline editing can be added if time allows)
+   - Track decisions in a JS object keyed by ucde_name
+
+5. Progress tracking:
+   - Update footer count after each action
+   - Activate submit button when all rows actioned
+
+CSS:
+Clean white background, cards, subtle borders.
+Responsive table with horizontal scroll on mobile.
+Smooth transition for detail panel slide-in.
+Match color scheme from upload page.
+
+Prompt for Step 17: Build reviewer action controls
+In frontend/results.html enhance the JavaScript 
+section with the following reviewer action logic:
+
+1. Create a reviewDecisions object at the top of 
+   the script section:
+   let reviewDecisions = {}
+   let totalUcdes = 0
+   let actionedCount = 0
+
+2. Create a function markDecision(ucdeName, action):
+   - Stores in reviewDecisions[ucdeName] = {
+       action: action,  // "Accept", "Modify", "Reject"
+       timestamp: new Date().toISOString(),
+       originalDisposition: the original disposition,
+       modifiedValues: {}  // empty for now
+     }
+   - Finds the table row for this UCDE and updates 
+     its visual state:
+     Accept: add green left border and checkmark icon
+     Reject: add red left border and X icon
+     Modify: add blue left border and pencil icon
+   - Increments actionedCount if this is a new action
+     (not updating an existing decision)
+   - Calls updateProgressFooter()
+
+3. Create updateProgressFooter():
+   - Updates the footer text: 
+     "{actionedCount} of {totalUcdes} UCDEs reviewed"
+   - Updates the progress bar width percentage
+   - If actionedCount === totalUcdes:
+     Enable the Submit for Approval button
+     Change button background to green
+   - Else keep button disabled and gray
+
+4. Add three action buttons to the detail panel:
+   Accept button (green): 
+     onclick calls markDecision(currentUcde, "Accept")
+     then closes the detail panel
+   Modify button (blue):
+     onclick calls markDecision(currentUcde, "Modify")
+     then closes panel (simplified for hackathon)
+   Reject button (red):
+     onclick calls markDecision(currentUcde, "Reject")
+     then closes the detail panel
+
+5. Add keyboard shortcut support:
+   Press A to Accept current open UCDE
+   Press R to Reject current open UCDE  
+   Press Escape to close the detail panel
+
+6. After fetching results set:
+   totalUcdes = response.change_matrix.length
+   Call updateProgressFooter() to initialize display
+
+7. Add a Reset All button in the header area 
+   that clears reviewDecisions, resets actionedCount 
+   to 0, removes all visual state from table rows, 
+   and disables the submit button again.
+   This is useful for demo purposes.
+
+Prompt for Step 18: Build the approval endpoint
+In backend/app.py add the following:
+
+1. Create POST /api/approve/{session_id} endpoint:
+
+   a. Reads JSON body containing:
+      {
+        "decisions": [
+          {
+            "ucde_name": "name",
+            "action": "Accept or Modify or Reject",
+            "reviewer_id": "reviewer name or ID"
+          }
+        ]
+      }
+   
+   b. Reads uploads/{session_id}/ucde_outputs.json
+   
+   c. Validates that every UCDE in ucde_outputs 
+      has a corresponding decision
+      If any missing return 400 with list of 
+      missing UCDE names
+   
+   d. Filters ucde_outputs to only include 
+      UCDEs where action is "Accept" or "Modify"
+      (Rejected UCDEs are excluded from final UCDD)
+   
+   e. Writes final UCDD Excel:
+      Open the existing 
+      outputs/{session_id}/{session_id}_UCDD_WIP.xlsx
+      Update the Version History sheet:
+      Add a new row with:
+      "v1-FINAL" | today's date | reviewer_id | 
+      "Human reviewed and approved" | "Approved"
+      Save the file
+   
+   f. Generates date stamp string: YYYYMM format 
+      from current date
+   
+   g. Renames the three output files:
+      {session_id}_CHANGE_MATRIX_WIP.xlsx -> 
+      {use_case_id}_CHANGE_MATRIX_{YYYYMM}.xlsx
+      {session_id}_UCDD_WIP.xlsx -> 
+      {use_case_id}_UCDD_{YYYYMM}.xlsx
+      
+      Use os.rename() for this.
+      If a WIP file does not exist skip renaming 
+      (do not fail).
+   
+   h. Updates session status to "approved"
+   
+   i. Returns:
+      {
+        "status": "approved",
+        "session_id": session_id,
+        "final_files": {
+          "change_matrix": new filename,
+          "ucdd": new filename
+        },
+        "summary": {
+          "total_accepted": count,
+          "total_rejected": count,
+          "total_modified": count
+        }
+      }
+   
+   j. Wraps in try/except returning 500 on error
+
+2. After approval add final download links to the 
+   results page by updating the download button 
+   hrefs to point to the renamed files.
+   Add a GET /api/sessions/{session_id}/files 
+   endpoint that returns current filenames:
+   {
+     "status": session status,
+     "files": {
+       "change_matrix": filepath or null,
+       "ucdd": filepath or null
+     }
+   }
+   The results page polls this after approval 
+   to update download button targets.
+
+Block 7 — Processing Page and Polish
+Prompt for Step 19: Build the processing page
+Create frontend/processing.html as a complete 
+single-file HTML page.
+
+The page:
+1. Reads session_id from URL query parameter ?session=
+2. Immediately calls POST /api/run/{session_id} 
+   to start the pipeline
+3. Simultaneously starts polling GET 
+   /api/status/{session_id} every 3 seconds
+
+DISPLAY:
+- Application title at top
+- Large centered spinner (CSS animated circle)
+- Current stage text below spinner:
+  Updated from session status current_stage field
+- A list of 8 stage names with status icons:
+  Parsing Documents
+  Structuring Content  
+  Detecting Changes
+  Mapping to UCDEs
+  Populating UCDD Fields
+  Assessing Materiality
+  Generating Outputs
+  Analysis Complete
+  
+  Each shows:
+  ○ (gray circle) when waiting
+  ↻ (spinning) when active - match current_stage
+  ✓ (green check) when complete
+
+STAGE MAPPING:
+Map current_stage values to which stages are complete:
+"Uploaded" -> none complete
+"Parsing Documents" -> none complete, stage 1 active
+"Structuring Content" -> 1 complete, stage 2 active
+"Detecting Changes" -> 1-2 complete, stage 3 active
+"Mapping to UCDEs" -> 1-3 complete, stage 4 active
+"Populating UCDD Fields" -> 1-4 complete, 5 active
+"Assessing Materiality" -> 1-5 complete, 6 active
+"Generating Outputs" -> 1-6 complete, 7 active
+"Analysis Complete" -> all complete
+
+POLLING LOGIC:
+Every 3 seconds call /api/status/{session_id}
+On each response:
+- Update the spinner text
+- Update stage status icons
+- If status === "ready_for_review":
+  Stop polling
+  Show "Analysis Complete!" message
+  After 2 second delay redirect to:
+  /frontend/results.html?session={session_id}
+- If status === "failed":
+  Stop polling
+  Hide spinner
+  Show error message in red:
+  "Processing failed: {current_stage}"
+  Show a "Try Again" button that goes back to 
+  the upload page
+
+API CALL:
+Immediately on page load POST to 
+/api/run/{session_id} (fire and forget - 
+do not wait for response, just start the pipeline)
+The polling will track progress independently.
+
+CSS:
+Clean centered layout
+Spinner: rotating border CSS animation
+Stage list: left-aligned below spinner
+Match color scheme from other pages
+
+Prompt for Step 20: End-to-end test and fix
+Add the following to backend/app.py to help with 
+testing and debugging:
+
+1. Create GET /api/sessions endpoint:
+   Scans the uploads/ directory for all folders.
+   For each folder reads session.json if it exists.
+   Returns a list of sessions sorted by date descending:
+   {
+     "sessions": [
+       {
+         "session_id": "",
+         "use_case_identifier": "",
+         "use_case_name": "",
+         "status": "",
+         "uploaded_at": "",
+         "current_stage": ""
+       }
+     ]
+   }
+
+2. Create DELETE /api/sessions/{session_id} endpoint:
+   Deletes the uploads/{session_id}/ folder 
+   and outputs/{session_id}/ folder.
+   Returns {"deleted": True}.
+   Use shutil.rmtree() for deletion.
+   This is for cleanup during testing only.
+
+3. Create GET /api/debug/{session_id} endpoint:
+   Returns a complete debug dump of the session:
+   {
+     "session_metadata": contents of session.json,
+     "files_in_uploads": list of files in uploads folder,
+     "files_in_outputs": list of files in outputs folder,
+     "change_matrix_exists": boolean,
+     "ucde_outputs_exists": boolean,
+     "detected_changes_exists": boolean
+   }
+   This endpoint is for debugging only.
+
+4. Add a simple test route GET /api/test-claude:
+   Sends a minimal test prompt to Claude:
+   "Return only this exact JSON: {'test': 'success'}"
+   Returns whether Claude responded correctly.
+   Use this to verify the API key works on 
+   hackathon day before starting the demo.
+
+5. Add CORS headers explicitly to all responses 
+   by adding after_request handler:
+   @app.after_request
+   def after_request(response):
+     response.headers.add('Access-Control-Allow-Origin', '*')
+     response.headers.add('Access-Control-Allow-Headers', 
+       'Content-Type,Authorization')
+     response.headers.add('Access-Control-Allow-Methods', 
+       'GET,PUT,POST,DELETE,OPTIONS')
+     return response
+
+6. Make sure uploads/ and outputs/ directories 
+   are created on startup if they do not exist:
+   os.makedirs("uploads", exist_ok=True)
+   os.makedirs("outputs", exist_ok=True)
+   os.makedirs("backend/templates", exist_ok=True)
+
+These additions make the system easy to test, 
+debug, and reset during the hackathon without 
+needing to manually delete folders.
+
+How to Use These Prompts
+Paste each prompt one at a time into GitHub Copilot Chat using Ctrl+Shift+I. Run them in order — do not skip steps. After each prompt test what was built before moving to the next prompt. The key checkpoints to verify before continuing are:
+After Step 1 — Flask starts and /health returns OK.
+After Step 4 — Uploading files creates the session folder correctly.
+After Step 6 — Parsers extract readable text from your actual PPTX and Excel files.
+After Step 8 — Claude returns a valid JSON list of detected changes.
+After Step 12 — The Change Matrix JSON file is correctly assembled in the session folder.
+After Step 15 — The Excel files download correctly and open in Excel.
+After Step 16 — The results page shows the table with colored rows.
+After Step 18 — Approval renames the output files correctly.

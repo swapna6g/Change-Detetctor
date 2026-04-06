@@ -1,0 +1,806 @@
+=== UCDD GUIDELINE RULES REFERENCE ===
+Version: 2.0
+Purpose: Field-level rules reference for AI prompt 
+         injection and rules engine validation
+Structure: One section per exact column name as it 
+           appears in the UCDD template
+Usage: Retrieve relevant section by column name 
+       and inject into corresponding prompt
+
+NOTE TO AI: When this document is provided to you,
+treat every rule listed under each column name as 
+a hard constraint. Do not deviate from valid values.
+Do not infer column names — use them exactly as written.
+
+================================================
+METADATA: "Use Case Identifier"
+================================================
+
+EXACT COLUMN NAME: Use Case Identifier
+CONDITION: Required
+CHARACTER LIMIT: Must match ADMF exactly
+
+FIELD DESCRIPTION:
+[INSERT YOUR FIELD DESCRIPTION HERE]
+Example: "Unique identifier found in ADMF for 
+each Use Case. This identifier is the authoritative 
+reference that links the UCDD to the enterprise 
+Use Case Inventory."
+
+RULES:
+- Value must come from ADMF — cannot be inferred
+- Must match exactly — no variations permitted
+- External Entry — sourced from Use Case Inventory
+- System will not proceed if this is unconfirmed
+
+VALID VALUES: Any valid ADMF identifier string
+INVALID VALUES: Any value not registered in ADMF
+
+VALIDATION OUTCOME:
+- Pass: Value confirmed against ADMF
+- Fail: Value not found or not confirmed
+- Action on Fail: Block processing — escalate to user
+
+================================================
+METADATA: "Use Case Name"
+================================================
+
+EXACT COLUMN NAME: Use Case Name
+CONDITION: Required
+CHARACTER LIMIT: Must match ADMF exactly
+
+FIELD DESCRIPTION:
+[INSERT YOUR FIELD DESCRIPTION HERE]
+Example: "The name of the Use Case as it appears 
+in the Use Case Inventory in ADMF. The Use Case 
+Name should match the Use Case Identifier above."
+
+RULES:
+- Must match Use Case Identifier above
+- Source is Use Case Inventory in ADMF
+- Cannot be inferred from document title alone
+- Must be confirmed before any row processing begins
+
+================================================
+COLUMN 1: "Use Case Element Name"
+================================================
+
+EXACT COLUMN NAME: Use Case Element Name
+CONDITION: Required
+CHARACTER LIMIT: 1024
+
+FIELD DESCRIPTION:
+[INSERT YOUR FIELD DESCRIPTION HERE]
+Example: "Provides the element name for an individual 
+item as it appears in the use case, adjusted to meet 
+Enterprise standards applied to use case element names.
+Note: For regulatory reports, the exact name as it 
+appears in the report may be used."
+
+MANDATORY STANDARDS:
+1. Use the English language
+2. Enter unique Use Case Element Names within 
+   this use case — use prefixes if needed
+3. Adhere to enterprise tooling character limit of 1024
+4. Use correct spelling and capitalization — capitalize 
+   first letter of each word
+5. Spell out acronyms using this format: 
+   Spelled Out Acronym (SOA)
+6. For regulatory reports only: copy use case element 
+   name directly from report
+
+RECOMMENDATIONS:
+- Ensure prefix (schedule, section, line etc.) is 
+  included at the beginning where applicable
+- Include appropriate Class Word to describe 
+  the data being represented
+- State element name in singular form
+- Avoid special characters and abbreviations
+
+UNIQUENESS RULES:
+- Name must be unique to an individual use case
+- When same field appears multiple times use reference 
+  number or section headers to establish uniqueness
+- To maintain uniqueness certain internal use cases 
+  will require reference numbers to designate two 
+  different elements with the same use case
+
+REGULATORY REPORT SPECIAL RULE:
+- For regulatory reports: exact name from report may 
+  be used as-is to maintain traceability
+- For regulatory reports acting as risk reports: 
+  refer to Regulatory Reports acting as Risk Report 
+  Overview in Appendix
+
+VALID NAME EXAMPLE:
+"3.2.2: Closed Allegations"
+"4.1.1: Count Of Opened Matter By Calendar Year"
+
+INVALID NAME EXAMPLE:
+"closed_allegations" — underscore not allowed
+"CA" — abbreviation not spelled out
+"This is the closed allegations count" — not title case
+
+================================================
+COLUMN 2: "Use Case Element Description"
+================================================
+
+EXACT COLUMN NAME: Use Case Element Description
+CONDITION: Required
+CHARACTER LIMIT: 4000
+
+FIELD DESCRIPTION:
+[INSERT YOUR FIELD DESCRIPTION HERE]
+Example: "Describes the business meaning or semantics 
+of the use case element, written in clear, concise, 
+English language that can be easily understood by 
+data consumers."
+
+MANDATORY STANDARDS:
+1. Use the English language
+2. Use good grammar, correct spelling, appropriate 
+   punctuation and appropriate capitalization
+3. Avoid circular reasoning — do not define a term 
+   using the term itself
+4. Do NOT start description with the word "This"
+5. Spell out acronyms: Spelled Out Acronym (SOA) 
+   and explain abbreviations
+6. Write a description that stands alone — must not 
+   require other descriptions or external documentation 
+   to give complete meaning
+
+RECOMMENDATIONS:
+- State the description precisely: 
+  what it IS vs what it IS NOT
+- State description in singular form
+- Write in readable plain English
+- Avoid programming language
+- Follow Wells Fargo Style Guide where applicable
+
+EXTERNAL USE CASE RULE:
+- Standard definitions already documented should 
+  be leveraged to complete element descriptions
+- External use case definitions can sometimes be found 
+  in supplemental information, instructions, or guidance 
+  sections provided by the external source
+
+INTERNAL USE CASE RULE:
+- Provide business meaning or semantics for the element
+- Must be based on content of the element
+- Written in clear concise English for data consumers
+
+REGULATORY REPORT NOTE:
+- For regulatory reports acting as risk reports refer 
+  to Regulatory Reports acting as Risk Report Overview 
+  in Appendix
+
+VALID DESCRIPTION EXAMPLE:
+"Count of closed employee-reported allegations for 
+a given period. Allegation is written or verbal report 
+of Rate of substantiated allegations, for a given 
+period, where employee-reported allegation was 
+substantiated."
+
+INVALID DESCRIPTION EXAMPLE:
+"This is the count field" — starts with This
+"See Closed Allegations definition" — circular/dependent
+"clsd_alg_cnt" — programming language
+
+================================================
+COLUMN 3: "*Use Case Hierarchy Level 1"
+================================================
+
+EXACT COLUMN NAME: *Use Case Hierarchy Level 1
+CONDITION: Required if applicable to a given Use Case
+           Asterisk denotes conditional requirement
+CHARACTER LIMIT: 1024
+
+FIELD DESCRIPTION:
+[INSERT YOUR FIELD DESCRIPTION HERE]
+Example: "Provides the top level section header for 
+a use case such as a report schedule or section."
+
+RULES:
+- Hierarchy Level 1 is the highest level for 
+  distinguishing a potential Use Case Element
+- Optional for internal use cases
+- Required if applicable for external use cases
+- Can be populated in several ways depending on 
+  type of use case:
+  * Regulatory Reporting Schedules or Sections
+  * Top level categories
+  * Header sections within a report
+- Goal: categorize data to aid searching and 
+  viewing use case metadata
+
+VALID EXAMPLES:
+"3. Conduct: All Allegations from 3.2: 
+ Employee-Reported Allegations"
+"M.1: Balances"
+"Schedule G: PPNR Submission"
+
+NOT APPLICABLE CONDITION:
+- If use case has no hierarchical structure 
+  leave blank
+- Document reason in processing notes
+
+================================================
+COLUMN 4: "*Use Case Hierarchy Level 2"
+================================================
+
+EXACT COLUMN NAME: *Use Case Hierarchy Level 2
+CONDITION: Required if applicable to a given Use Case
+           Asterisk denotes conditional requirement
+CHARACTER LIMIT: 1024
+
+FIELD DESCRIPTION:
+[INSERT YOUR FIELD DESCRIPTION HERE]
+Example: "When needed, provides a further detailed 
+breakout of the Hierarchy Level 1 Section such as 
+an individual line item when multiple columns exist."
+
+RULES:
+- Provided as optional field to further breakdown 
+  a report into different levels
+- Potential uses:
+  * Line items for multi-column reports
+  * Reports with multiple hierarchy within single report
+- Designed to aid readability and presentation when 
+  viewing use case metadata in tooling environment
+- Only populate when Level 1 alone does not 
+  sufficiently distinguish elements
+
+VALID EXAMPLES:
+"M.1.1: Loans secured by real estate"
+"G.1: Retail and Small Business"
+"3.2: Employee-Reported Allegations"
+
+================================================
+COLUMN 5: "MDR M"
+================================================
+
+EXACT COLUMN NAME: MDR M
+CONDITION: Required if applicable to a given Use Case
+CHARACTER LIMIT: 8
+
+FIELD DESCRIPTION:
+[INSERT YOUR FIELD DESCRIPTION HERE]
+Example: "The Micro Data Reference Manual (MDRM) 
+is a catalog of data series included in the Board 
+of Governors of the Federal Reserve System's micro 
+data (Structure and Financial) files."
+
+RULES:
+- Only applicable for regulatory reports where 
+  this field exists on those reports
+- Used to identify an individual use case element 
+  on the report
+- Some regulatory reports may not have MDRM codes 
+  for each element — provide when it does exist
+- Character limit is 8
+- Do NOT fabricate or guess MDRM codes
+- Only populate if code is explicitly visible 
+  in the source report
+
+VALID VALUE FORMAT:
+"CALBP328"
+"CALBP332"
+
+NOT APPLICABLE CONDITION:
+- If report is not a Federal Reserve regulatory report
+- If MDRM code does not exist for this element 
+  in the source report
+- Leave blank — do not write N/A
+
+================================================
+COLUMN 6: "Accuracy Dimension"
+================================================
+
+EXACT COLUMN NAME: Accuracy Dimension
+CONDITION: Required
+CHARACTER LIMIT: N/A — select from dropdown value
+
+FIELD DESCRIPTION:
+[INSERT YOUR FIELD DESCRIPTION HERE]
+Example: "This field will be used by the use case 
+owner to identify the type of DQ check that should 
+be implemented to verify if the data consumed by 
+the use case is accurate. If the use case owner 
+expects more than one DQ check to be implemented, 
+the value of Multiple must be selected. If no 
+accuracy DQ checks are expected by the use case 
+owner, the value of N/A must be selected."
+
+VALID DROPDOWN VALUES ONLY:
+Select one of the following:
+- Single check number: 1 through 12
+- "Multiple" — when more than one check applies
+- "N/A" — when no accuracy checks are possible
+
+CONDITIONAL TRIGGER:
+- If "Multiple" selected → Column 7 BECOMES REQUIRED
+- If "N/A" selected → Column 8 BECOMES REQUIRED
+- If single number selected → Columns 7 and 8 
+  are NOT required
+
+DQ CHECK NUMBER COMPLETE REFERENCE:
+
+CHECK 1: Accuracy Check Against Master Data
+Definition: Verifies if the data element value 
+matches a data value in a linked master data table 
+(authoritative source for the data)
+Example: Checking zip code against USPS zip code table
+USE FOR: Elements that must match a reference master table
+
+CHECK 2: Valid Value Check
+Definition: Verifies if the data element value is 
+one of the approved data element values in a reference 
+data table or valid values selected from dropdowns
+Example: Product Name selected from approved dropdown list
+USE FOR: Elements with a defined set of valid values
+
+CHECK 3: Valid Date Check
+Definition: Verifies that only valid calendar dates 
+can be selected using calendar pop-up or by comparing 
+to a back-end system calendar
+Example: Customer Date of Birth validated by calendar
+USE FOR: DATE FIELDS ONLY — not for counts or text
+
+CHECK 4: Date Range Check
+Definition: Verifies if the data element date value 
+falls within a predefined date range
+Example: Sales Date verified within approved date range
+USE FOR: DATE RANGE VALIDATION ONLY — not for counts
+
+CHECK 5: Numeric Range Check
+Definition: Verifies if a numeric data element value 
+is within a predefined numeric range
+Example: Customer Age verified between 18 and 65
+USE FOR: NUMERIC AND COUNT FIELDS
+
+CHECK 6: Duplicate Value Check
+Definition: Verifies if the data element value entered 
+is not a duplicate already entered for that element
+Example: System checks for repeated Employee IDs
+USE FOR: Fields that must contain unique entries
+
+CHECK 7: Data Format / Layout Check
+Definition: Verifies if the data element value entered 
+conforms to the specified or defined data format
+Example: SSN verified in format XXX-XX-XXXX
+USE FOR: Fields with strict format requirements
+
+CHECK 8: Data Length / # of Characters Check
+Definition: Verifies if the data element value entered 
+conforms to the specified data length or number 
+of characters
+Example: SSN verified to be exactly 9 digits
+USE FOR: Fields with strict character count requirements
+
+CHECK 9: Data Precision / Decimal Places Check
+Definition: Verifies if the data element value entered 
+conforms to the specified precision — number of numeric 
+digits to the right of the decimal place
+Example: Note rate value verified to 2 decimal places
+USE FOR: Numeric fields with decimal precision requirements
+
+CHECK 10: Invalid Characters Check
+Definition: Verifies if the data element value entered 
+contains any specified or defined invalid characters
+Example: System blocks entry of !@#$%&? characters
+USE FOR: Text fields where special characters 
+         must be excluded
+
+CHECK 11: Business Logic / Rule Driven Content
+Definition: Verifies if the data element value adheres 
+to specific business defined logic or rule
+Example: Customer Date of Death verified to be after 
+Customer Date of Birth
+USE FOR: CALCULATED OR DERIVED FIELDS — almost always 
+required for aggregated metrics and rates
+
+CHECK 12: Conditional Field / Value Check
+Definition: Based on value in one data element, verifies 
+if the data element being entered meets the defined 
+condition
+Example: If Loan Status is Approved then Loan Approver 
+Name must be populated with a designated approver name
+USE FOR: Fields whose validity depends on another field
+
+DATA TYPE TO CHECK NUMBER MAPPING:
+- Numeric count fields → 5, 11 most appropriate
+- Rate or percentage fields → 5, 9, 11 most appropriate
+- Date fields → 3, 4 most appropriate
+- Text fields → 2, 10 most appropriate
+- Calculated or derived fields → 11 almost always required
+- Fields matching master data → 1 required
+- Fields with approved value sets → 2 required
+- Fields dependent on other fields → 12 required
+
+================================================
+COLUMN 7: "Accuracy Dimension [MULTI]"
+================================================
+
+EXACT COLUMN NAME: Accuracy Dimension [MULTI]
+CONDITION: Required if "Multiple" selected in 
+           Accuracy Dimension (Column 6)
+CHARACTER LIMIT: 50
+
+FIELD DESCRIPTION:
+[INSERT YOUR FIELD DESCRIPTION HERE]
+Example: "This field identifies the numeric values 
+representing the DQ checks that the use case owner 
+expects to be implemented to confirm the use case 
+data is accurate."
+
+RULES:
+- ONLY populate when Column 6 = "Multiple"
+- Enter check numbers separated by commas
+- No spaces after commas
+- Numbers must be from the valid list 1 through 12
+- Maximum 50 characters total
+
+VALID FORMAT EXAMPLES:
+"1,6,8"
+"5,11"
+"3,4,7"
+
+INVALID FORMAT EXAMPLES:
+"1, 6, 8" — spaces not permitted
+"one,six,eight" — must be numbers not words
+"1,6,15" — 15 is not a valid check number
+
+================================================
+COLUMN 8: "Accuracy Dimension N/A Justification"
+================================================
+
+EXACT COLUMN NAME: Accuracy Dimension N/A Justification
+CONDITION: Required if "N/A" selected in 
+           Accuracy Dimension (Column 6)
+CHARACTER LIMIT: 4000
+
+FIELD DESCRIPTION:
+[INSERT YOUR FIELD DESCRIPTION HERE]
+Example: "This field will contain the use case owner's 
+justification for identifying the Accuracy dimension 
+as N/A (not applicable). The justification should 
+provide an explanation that clearly defends not 
+implementing any DQ checks to verify if the use 
+case data is accurate."
+
+JUSTIFICATION MUST MEET ALL FIVE CRITERIA:
+1. Explain clearly WHY the Accuracy dimension 
+   does not apply or cannot be met
+2. Reference the ADS type:
+   - Approved ADS
+   - External third-party data source provider
+     (e.g. Bloomberg, Experian)
+   - Non-application source (EUCT, model, 
+     Excel file, Email)
+   - Externally hosted third-party application
+     (e.g. Aspen Grove, Black Knight)
+3. Reference data control number if available: 
+   format #C-XXXXX
+4. Must NOT be vague or generic
+5. Must be under 4000 characters
+
+UNACCEPTABLE JUSTIFICATION EXAMPLES:
+"We follow different rules."
+"No need for accuracy dimension in this scenario."
+"This data does not need accuracy checks."
+
+ACCEPTABLE JUSTIFICATION EXAMPLES:
+"The approved data source (ADS) is an external 
+third-party data source provider that does not allow 
+Wells Fargo to implement automated data quality (DQ) 
+checks. See data control #C-22222 for how the data 
+accuracy is verified within the use case process."
+
+"The data elements are not provided by the approved 
+data source (ADS). See data control #C-11111 for 
+how the data accuracy is verified within the use 
+case process."
+
+================================================
+COLUMN 9: "Completeness Dimension"
+================================================
+
+EXACT COLUMN NAME: Completeness Dimension
+CONDITION: Required
+CHARACTER LIMIT: N/A — select from dropdown value
+
+FIELD DESCRIPTION:
+[INSERT YOUR FIELD DESCRIPTION HERE]
+Example: "This field will be used by the use case 
+owner to identify the type of DQ check that should 
+be implemented to verify if the data consumed by 
+the use case is complete. If no completeness DQ 
+checks are expected by the use case owner, the 
+value of N/A must be selected."
+
+VALID DROPDOWN VALUES ONLY:
+- "Missing / Blank Value Check"
+- "Conditional Field / Value Check"  
+- "Business Logic / Rule Driven Content"
+- "N/A"
+
+NO Multiple option exists for Completeness.
+
+CONDITIONAL TRIGGER:
+- If "N/A" selected → Column 10 BECOMES REQUIRED
+- Otherwise Column 10 is NOT required
+
+DQ CHECK DEFINITIONS FOR COMPLETENESS:
+
+Missing / Blank Value Check:
+Definition: Verifies if a value is entered when it 
+is a mandatory or required field
+Example: System requires Loan Amount before analyst 
+can proceed to next screen
+USE FOR: Fields that must always be populated
+
+Conditional Field / Value Check:
+Definition: Based on value in one data element, 
+verifies if the data element being entered meets 
+the defined condition — a value must be populated
+Example: System requires Loan Default Reason if 
+Loan Status is set to Default
+USE FOR: Fields required only when another field 
+has a specific value
+
+Business Logic / Rule Driven Content:
+Definition: Verifies if the data element value 
+adheres to specific business defined logic or rule
+Example: If Loan Status is Sold then Sale Date 
+must be populated
+USE FOR: Completeness governed by business rules
+
+================================================
+COLUMN 10: "Completeness Dimension N/A Justification"
+================================================
+
+EXACT COLUMN NAME: Completeness Dimension N/A Justification
+CONDITION: Required if "N/A" selected in 
+           Completeness Dimension (Column 9)
+CHARACTER LIMIT: 4000
+
+FIELD DESCRIPTION:
+[INSERT YOUR FIELD DESCRIPTION HERE]
+Example: "This field will contain the use case owner's 
+justification for identifying the Completeness dimension 
+as N/A (not applicable). The justification should 
+provide an explanation that clearly defends not 
+implementing any DQ checks to verify if the use 
+case data is complete."
+
+JUSTIFICATION QUALITY RULES:
+Same five criteria as Column 8.
+Must explain why completeness checks cannot 
+be implemented.
+Must reference ADS type.
+Must reference data control number if available.
+Must not be vague.
+Under 4000 characters.
+
+ACCEPTABLE JUSTIFICATION EXAMPLE:
+"The approved data source (ADS) is a non-application 
+and automated data checks cannot be implemented. 
+See data control #C-33333 for how the data 
+completeness is verified within the use case process."
+
+================================================
+COLUMN 11: "Timeliness Dimension"
+================================================
+
+EXACT COLUMN NAME: Timeliness Dimension
+CONDITION: Required
+CHARACTER LIMIT: N/A — select from dropdown value
+
+FIELD DESCRIPTION:
+[INSERT YOUR FIELD DESCRIPTION HERE]
+Example: "This field will be used by the use case 
+owner to identify the type of DQ check that should 
+be implemented to verify if the data consumed by 
+the use case is timely. If no timeliness DQ checks 
+are expected by the use case owner, the value of 
+N/A must be selected."
+
+VALID DROPDOWN VALUES ONLY:
+- "Data Delivery Check"
+- "N/A"
+
+IMPORTANT: NO Multiple option exists for Timeliness.
+Only one check type exists for this dimension.
+
+CONDITIONAL TRIGGER:
+- If "N/A" selected → Column 12 BECOMES REQUIRED
+- Otherwise Column 12 is NOT required
+
+DQ CHECK DEFINITION FOR TIMELINESS:
+
+Data Delivery Check:
+Definition: Ensures that the file or feed was received 
+(pushed or pulled) within the agreed upon SLA
+Example: Ensure timely delivery for identifying 
+Daily Cash Flow and Liquidity Coverage Ratio using 
+automated monitoring to track deadlines flagging 
+any delays or incomplete sections and taking 
+corrective action to meet regulatory compliance
+USE FOR: All elements sourced from data feeds 
+or pipelines with defined SLA
+
+NOTE: This timeliness DQ check is implemented as 
+a data movement check for data loaded into the 
+approved data source (ADS)
+
+================================================
+COLUMN 12: "Timeliness Dimension N/A Justification"
+================================================
+
+EXACT COLUMN NAME: Timeliness Dimension N/A Justification
+CONDITION: Required if "N/A" selected in 
+           Timeliness Dimension (Column 11)
+CHARACTER LIMIT: 4000
+
+FIELD DESCRIPTION:
+[INSERT YOUR FIELD DESCRIPTION HERE]
+Example: "This field will contain the use case owner's 
+justification for identifying the Timeliness dimension 
+as N/A (not applicable). The justification should 
+provide an explanation that clearly defends not 
+implementing any DQ checks to verify if the use 
+case data is timely."
+
+JUSTIFICATION QUALITY RULES:
+Same five criteria as Columns 8 and 10.
+Must explain why timeliness checks cannot 
+be implemented.
+Must reference ADS type — common scenario is 
+externally hosted third-party application.
+Must reference data control number if available.
+
+ACCEPTABLE JUSTIFICATION EXAMPLE:
+"The approved data source (ADS) is an externally 
+hosted third-party application that does not allow 
+Wells Fargo to implement automated data movement 
+checks for timeliness. See data control #C-44444 
+for how the data timeliness is verified within 
+the use case process."
+
+================================================
+MULTI-DIMENSIONAL ELEMENT HANDLING
+================================================
+[NOT A COLUMN — Processing decision before rows 
+are written]
+
+APPLIES WHEN: Same element appears across multiple 
+dimensions such as by country, by segment, 
+by time period
+
+DEFINITION: A multi-dimensional use case element 
+presents data in more than a simple 2-dimensional 
+table — the same element repeated multiple times 
+based on an additional data dimension
+
+TWO VALID APPROACHES:
+
+APPROACH 1 — Document All Use Case Elements:
+- Create one separate UCDE row per dimension value
+- Element name includes dimension value suffix
+- Example: 
+  "C_09_01_a_0010_0050_BR_qABJ" for Brazil
+  "C_09_01_a_0010_0050_EE_qABJ" for Estonia
+  "C_09_01_a_0010_0050_SG_qABJ" for Singapore
+- USE WHEN: Each dimension value is uniquely 
+  calculated or derived differently
+
+APPROACH 2 — Document Unique Use Case Elements Only:
+- Create one UCDE row with BY_DIMENSION notation
+- Example:
+  "C_09_01_a_0010_0050_BY_COUNTRY"
+- Description acknowledges the dimension exists 
+  but does not list individual values
+- USE WHEN: Dimensional elements are created by 
+  filtering, summarizing, or pivoting unique data
+  — not uniquely calculated per dimension
+- Eliminates need to document separate element 
+  per dimension value
+
+DECISION CRITERIA:
+- Are dimension values uniquely calculated → Approach 1
+- Are dimension values filtered or summarized 
+  views of same calculation → Approach 2
+- When uncertain → Flag as Review Required and 
+  present both options to human reviewer
+
+================================================
+FILE NAMING CONVENTION
+================================================
+[Applied to output UCDD file — not a column]
+
+FORMAT: [Use Case ID]_UCDD_[YYYYMM]
+- Use Case ID: from ADMF — same as Use Case Identifier
+- UCDD: literal artifact type code
+- YYYYMM: date of final QA signoff
+
+WORK IN PROGRESS FORMAT: [Use Case ID]_UCDD_WIP
+- Use during processing before human approval
+- Switch to YYYYMM format on final approval
+
+EXAMPLES:
+"APM0004862_UCDD_202504" — final approved version
+"APM0004862_UCDD_WIP" — pending review
+
+QA ENFORCEMENT NOTE:
+- QA will enforce this naming convention during review
+- Initial submissions ending in WIP are accepted
+- Final submissions must use YYYYMM format
+
+================================================
+DQ DIMENSIONS ENTERPRISE ECOSYSTEM CONTEXT
+================================================
+[Background context for AI — not a column rule]
+
+The UCDD DQ dimensions flow into a larger enterprise 
+governance chain that AI must be aware of:
+
+UCDD → Enterprise Data Checks Catalog (EDCC) 
+     → Fit for Purpose (FFP) Business Metadata
+
+- Use Case Owner (UCO) captures DQ dimension 
+  expectations in UCDD template
+- UCDD undergoes QA review
+- UCO approves UCDD
+- Application Business Owners (ABOs) document 
+  DQ checks in EDCC identifying Primary (required) 
+  and Secondary (optional) DQ Check Dimensions
+- EDCC performs upload checks via ADMF
+- ABO approves EDCC in ADMF
+
+IMPLICATION FOR AI OUTPUT:
+- DQ check numbers recommended must be compatible 
+  with EDCC registration
+- Select only from the governed numbered list
+- N/A justifications must be defensible at 
+  EDCC review level — not just UCDD level
+- Enterprise Data Quality Defect Management (EDQDM) 
+  captures new DQ dimension fields for defects
+
+================================================
+JUSTIFICATION QUALITY SCORING REFERENCE
+================================================
+[Used by rules engine to validate N/A justifications
+ in Columns 8, 10, and 12]
+
+A justification is scored against 5 criteria.
+Each criterion is pass or fail.
+Score = number of criteria passed out of 5.
+Score below 3 = flag as Review Required.
+
+CRITERION 1: Explains why
+- Does it explicitly state why the DQ dimension 
+  does not apply or cannot be implemented?
+- Pass: Clear explanation present
+- Fail: Vague or missing explanation
+
+CRITERION 2: References ADS type
+- Does it name the specific type of data source?
+- Pass: ADS type named (approved ADS / third-party /
+        non-application / externally hosted)
+- Fail: Generic reference or no ADS mention
+
+CRITERION 3: References data control number
+- Does it include a data control reference: #C-XXXXX?
+- Pass: Control number present
+- Fail: No control number
+- Unknown: Control number may exist but not available 
+  in current context — flag for human to complete
+
+CRITERION 4: Not vague
+- Is the justification specific and substantive?
+- Pass: Specific explanation with context
+- Fail: Generic one-liner without detail
+
+CRITERION 5: Under 4000 characters
+- Pass: Character count confirmed under 4000
+- Fail: Exceeds 4000 characters — must be shortened

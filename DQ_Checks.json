@@ -1,0 +1,13 @@
+{
+  "valid_accuracy_checks": [1,2,3,4,5,6,7,8,9,10,11,12],
+  "valid_completeness_checks": [
+    "Missing / Blank Value Check",
+    "Conditional Field / Value Check",
+    "Business Logic / Rule Driven Content",
+    "N/A"
+  ],
+  "valid_timeliness_checks": [
+    "Data Delivery Check",
+    "N/A"
+  ]
+}

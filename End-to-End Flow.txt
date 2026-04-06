@@ -1,0 +1,553 @@
+Great idea — let us do a complete end-to-end flow audit before touching any code. Let me map every step from the moment the user opens the browser to the final approved output being downloaded.
+
+Phase 0 — System Startup (Before Any User Interaction)
+0.1 — Load Configuration
+Backend reads system_config.json into memory.
+Reads mode_2_enabled to determine whether to show mode toggle on UI.
+Reads all threshold values, batch size, accepted formats.
+0.2 — Load Prompt Library
+Backend reads UCDD_MASTER_PROMPT_LIBRARY.txt into memory.
+Parses it into sections using === SECTION N === markers.
+Each section stored as a named entry for fast retrieval.
+0.3 — Load Guideline Rules
+Backend reads guideline_rules.txt into memory.
+Parses into sections by column name markers.
+Rules engine stores these for validation use throughout processing.
+0.4 — Load Routing Map
+Backend reads prompt_routing_map.json into memory.
+Maps step names to section numbers for both modes.
+0.5 — Load ADMF Reference
+Backend reads admf_identifier_lookup.json into memory.
+Stores valid Use Case Identifiers and their corresponding names.
+0.6 — Load DQ Validation Reference
+Backend reads dq_check_validation.json into memory.
+Stores valid check numbers for Accuracy, Completeness, Timeliness.
+Rules engine uses this for hard validation — no AI needed.
+0.7 — Verify Templates Exist
+Backend confirms all three Excel templates are present:
+CHANGE_MATRIX_TEMPLATE.xlsx
+UCDD_OUTPUT_TEMPLATE.xlsx
+AUDIT_LOG_TEMPLATE.xlsx
+If any missing — log error and alert on startup.
+0.8 — Verify API Key
+Backend reads ANTHROPIC_API_KEY from .env file.
+Sends a test ping to confirm the key is valid.
+If invalid — log error and display alert to user.
+
+Phase 1 — User Interface — Upload Screen
+1.1 — User Opens Application
+Browser loads the upload page index.html.
+Page makes a GET request to backend to fetch config values.
+Backend returns mode_2_enabled value.
+1.2 — Mode Toggle Display
+If mode_2_enabled = false:
+Upload page shows no toggle — three zones displayed directly.
+If mode_2_enabled = true:
+Page shows toggle at the top before any upload zones:
+"Is this a new use case being documented for the first time?"
+○ No — Updated Report (Mode 1) ← default selected
+○ Yes — New Report (Mode 2)
+1.3 — Upload Zones Render Based on Mode
+Mode 1 — three upload zones displayed:
+Zone 1: New Use Case Report
+Accepted: .pdf .docx .doc .txt .pptx
+Label: Required
+Zone 2: Prior Approved Report
+Accepted: .pdf .docx .doc .txt .pptx
+Label: Required
+Zone 3: Existing UCDD
+Accepted: .xlsx .xls .csv
+Label: Required
+Mode 2 — two upload zones displayed:
+Zone 1: New Use Case Report
+Accepted: .pdf .docx .doc .txt .pptx
+Label: Required
+Note displayed: "No prior report or existing UCDD needed"
+1.4 — ADMF Identifier Entry
+Below the upload zones a text field labeled:
+"Use Case Identifier (from ADMF)"
+User types or pastes the identifier — example APM0004862.
+On blur the field validates against the ADMF lookup JSON.
+If found: green checkmark shown + Use Case Name auto-populated.
+If not found: red warning shown — "Identifier not found in ADMF reference. Proceed with caution."
+1.5 — File Upload Interaction
+User clicks a zone or drags a file onto it.
+File type validated client-side immediately:
+If wrong type — inline error shown — file rejected.
+If correct type — filename shown with checkmark.
+File size validated — if over 50MB — inline error shown.
+Status bar below zones updates — "2 of 3 documents uploaded."
+1.6 — Begin Analysis Button
+Button stays disabled until:
+All required zones have files.
+ADMF identifier field has a value.
+When all conditions met — button activates with green color.
+Button label: "Begin Analysis →"
+1.7 — User Clicks Begin Analysis
+UI disables all inputs to prevent double submission.
+Button text changes to "Preparing analysis..."
+A loading spinner appears inside the button.
+Frontend sends a POST request to /api/upload with:
+All uploaded files as multipart form data.
+Selected processing mode (Mode 1 or Mode 2).
+ADMF identifier value.
+Session metadata — browser timestamp.
+
+Phase 2 — Backend Ingestion
+2.1 — Request Received at /api/upload
+Backend validates all required fields are present.
+Validates file types server-side — second validation layer.
+Validates file sizes server-side.
+If any validation fails — returns 400 error with specific message.
+Frontend shows the error inline — user corrects and resubmits.
+2.2 — Session Created
+Backend generates unique Session ID:
+Format: [UseCase_ID]_[YYYYMMDD]_[HHMMSS]
+Example: APM0004862_20260406_143022
+Creates session folder in uploads: uploads/APM0004862_20260406_143022/
+Saves uploaded files into this session folder.
+Creates session metadata JSON file:
+json{
+  "session_id": "APM0004862_20260406_143022",
+  "use_case_identifier": "APM0004862",
+  "processing_mode": "Mode 1",
+  "uploaded_at": "2026-04-06T14:30:22",
+  "status": "uploaded",
+  "files": {
+    "new_report": {
+      "filename": "new_report.pptx",
+      "size_bytes": 2048000,
+      "format": "pptx"
+    },
+    "prior_report": {
+      "filename": "prior_report.pdf",
+      "size_bytes": 1536000,
+      "format": "pdf"
+    },
+    "existing_ucdd": {
+      "filename": "APM0004862_UCDD_WIP.xlsx",
+      "size_bytes": 512000,
+      "format": "xlsx"
+    }
+  }
+}
+2.3 — Output Session Folder Created
+Backend creates matching folder in outputs:
+outputs/APM0004862_20260406_143022/
+Copies all three templates into this folder:
+APM0004862_20260406_143022_CHANGE_MATRIX_WIP.xlsx
+APM0004862_20260406_143022_UCDD_WIP.xlsx
+APM0004862_20260406_143022_AUDIT_LOG_WIP.xlsx
+Templates in backend/templates/ remain untouched.
+2.4 — Backend Returns Session ID to Frontend
+Response: { "session_id": "APM0004862_20260406_143022", "status": "ingested" }
+Frontend receives this and redirects user to processing page:
+/processing.html?session=APM0004862_20260406_143022
+
+Phase 3 — Processing Page and Progress Tracking
+3.1 — Processing Page Loads
+Browser loads processing.html with the session ID in URL.
+Page immediately starts polling backend at /api/status/{session_id} every 3 seconds.
+Shows a named stage progress tracker:
+Stage 1: Parsing Documents          ○ Waiting
+Stage 2: Structuring Content        ○ Waiting
+Stage 3: Detecting Changes          ○ Waiting
+Stage 4: Mapping to UCDEs           ○ Waiting
+Stage 5: Assessing Dispositions     ○ Waiting
+Stage 6: Materiality Assessment     ○ Waiting
+Stage 7: Validating Compliance      ○ Waiting
+Stage 8: Generating Outputs         ○ Waiting
+Each stage updates from Waiting → In Progress → Complete as backend reports progress.
+3.2 — Backend Begins Processing Pipeline
+Backend updates session status to "processing" and begins.
+Every status update written to session metadata JSON file.
+Frontend polling reads this file and updates the progress display.
+
+Phase 4 — Document Processing Layer
+4.1 — Parse New Use Case Report
+Backend detects file format from extension.
+For .pdf files:
+Extract text layer using PDF text extraction.
+If extraction returns empty — flag as scanned PDF.
+Scanned PDFs require OCR — for hackathon flag as unsupported and alert user.
+For .docx or .doc files:
+Extract text preserving headings, bullets, paragraphs.
+Convert heading styles to markdown markers.
+For .pptx files:
+Extract text from each slide in order.
+Preserve slide title as section heading.
+Extract text from all text boxes on each slide.
+Extract table content from slides — preserve row/column structure.
+Note: PPTX is a critical format for this use case because both sample reports are PowerPoint presentations.
+For .txt files:
+Read directly — clean encoding artifacts.
+Output: raw extracted text with preserved structure.
+4.2 — Parse Prior Approved Report (Mode 1 only)
+Same process as 4.1 applied to the prior report file.
+Output: raw extracted text with preserved structure.
+4.3 — Parse Existing UCDD (Mode 1 only)
+For .xlsx or .xls:
+Read Sheet 1 — Use Case Dictionary tab.
+Read Sheet 2 — Upstream PDE Sourcing tab.
+Convert each row to a structured object with exact column names as keys.
+Extract Use Case Identifier and Use Case Name from header rows.
+For .csv:
+Read as tabular data.
+Map columns to expected UCDD column names.
+Flag any missing expected columns.
+Output: structured list of existing UCDE objects.
+4.4 — Placeholder Detection
+Scan all extracted text from all documents.
+Find all occurrences of ## or ### or #### patterns.
+Replace with [REDACTED] token.
+Log count of replacements per document.
+This prevents placeholder values being treated as real data.
+4.5 — Structure Documents Using AI
+For each report call Claude with Section 0 plus structuring prompt.
+Prompt asks Claude to organize content into labeled sections:
+Background and Purpose
+Data Elements
+Calculations and Business Logic
+Report Outputs
+Data Sources
+Business Rules and Governance Notes
+Output: structured JSON with section labels as keys and extracted content as values.
+4.6 — Generate Section Structure Map
+Claude reads the structured content and produces section hierarchy:
+Top-level sections with exact titles.
+Sub-sections under each top-level section.
+Hierarchy Level 1 and Level 2 candidates for each section.
+This replaces the manually pre-built structure map discussed earlier.
+4.7 — Normalize Terminology
+Claude compares terminology across both reports.
+Identifies synonyms or variations of the same concept.
+Produces a normalization map — old term maps to new term.
+Applied before comparison to ensure semantic accuracy.
+4.8 — Validate Parsing Success
+Check that Data Elements section is not empty in either report.
+Check that UCDD has at least one UCDE row.
+Check that Use Case Identifier in UCDD matches ADMF confirmed value.
+If any check fails — stop processing — update session status to "failed" — alert user with specific reason.
+Update session status to "parsed" — progress tracker shows Stage 1 and 2 complete.
+
+Phase 5 — ADMF Metadata Confirmation
+5.1 — Confirm Use Case Identifier
+Backend sends Section 4 prompt to Claude.
+Passes user-confirmed ADMF identifier.
+Passes Use Case Name extracted from documents.
+Claude confirms match or flags mismatch.
+If mismatch — flag for human review — do not block processing.
+5.2 — Write Metadata to Output UCDD
+Write confirmed Use Case Identifier to output UCDD template header.
+Write confirmed Use Case Name to output UCDD template header.
+Write to Version History sheet — version v1 — session ID — date.
+
+Phase 6 — Stage 2 — Semantic Comparison (Mode 1) or Element Discovery (Mode 2)
+MODE 1 PATH:
+6.1 — Early Exit Check
+Calculate semantic similarity score between new and prior report.
+If similarity above early_exit_similarity_threshold (0.95):
+Assign No Change to all existing UCDEs.
+Skip Steps 6.2 through 6.4.
+Jump directly to Phase 8.
+Update session status — log early exit reason.
+6.2 — Change Detection Engine
+Load Section 0 and Section 2 from prompt library using routing map.
+Send structured new report and prior report section by section.
+Claude identifies every meaningful change per section.
+Returns structured list of detected changes with source references.
+Update session status — Stage 3 In Progress.
+6.3 — Impact Mapping Engine
+Load Section 0 and Section 3 from prompt library.
+Send detected changes from 6.2 plus existing UCDE list.
+Claude maps each change to affected UCDEs.
+Assigns preliminary disposition to each UCDE.
+Returns UCDE disposition list.
+Update session status — Stage 4 In Progress.
+6.4 — Multi-Dimensional Detection
+Scan detected changes and UCDE list for multi-dimensional elements.
+Elements appearing across country, segment, or time dimensions flagged.
+For each flagged element:
+Load Section 14 from prompt library.
+Claude recommends Approach 1 or Approach 2.
+Both approaches previewed and stored for reviewer decision.
+These are not auto-resolved — presented to reviewer in dashboard.
+MODE 2 PATH:
+6.5 — Element Discovery Engine
+Load Section 0 and Section 1 from prompt library.
+Send structured new report content to Claude.
+Claude discovers all distinct data elements.
+Returns complete element list with data types, sections, hierarchy candidates.
+Multi-dimensional detection runs as part of discovery.
+Update session status — Stage 3 complete.
+
+Phase 7 — Stage 3 and 4 — Disposition and Materiality
+7.1 — Batch UCDEs for Processing
+Take complete UCDE list — either from existing UCDD (Mode 1) or discovery (Mode 2).
+Split into batches of batch_size from config (default 50).
+For your demo use case with 6 UCDEs — one batch only.
+7.2 — Column-by-Column Processing Per UCDE
+For each UCDE in the batch process all 12 columns in sequence.
+Each column uses its section from the prompt library via routing map.
+Column 1 — Section 5:
+Generate or validate Use Case Element Name.
+Apply naming standards from guideline_rules.txt.
+For No Change in Mode 1 — carry forward existing value.
+Column 2 — Section 6:
+Generate or validate Use Case Element Description.
+Apply description standards.
+For No Change in Mode 1 — carry forward existing value.
+Columns 3 and 4 — Section 7:
+Determine Hierarchy Level 1 and Level 2.
+Use section structure map from Phase 4.6.
+For No Change in Mode 1 — carry forward existing values.
+Column 5 — Section 8:
+Extract MDRM code if visible in report.
+Do not fabricate — flag if uncertain.
+For No Change in Mode 1 — carry forward existing value.
+Columns 6, 7, 8 — Section 9:
+Select Accuracy Dimension.
+If Multiple — populate Accuracy Dimension MULTI field.
+If N/A — generate justification meeting all 5 quality criteria.
+For No Change in Mode 1 — carry forward all three columns.
+Columns 9, 10 — Section 10:
+Select Completeness Dimension.
+If N/A — generate justification.
+For No Change in Mode 1 — carry forward both columns.
+Columns 11, 12 — Section 11:
+Select Timeliness Dimension — only Data Delivery Check or N/A.
+If N/A — generate justification.
+For No Change in Mode 1 — carry forward both columns.
+7.3 — Rules Engine Validation Per Column
+After each column is returned by Claude the rules engine validates:
+For text fields:
+Character count within limit.
+Does not start with "This" (description).
+No programming language detected.
+For dropdown fields:
+Value is from valid dropdown list using DQ validation reference JSON.
+If Multiple selected — MULTI field is populated.
+If MULTI field populated — all check numbers are valid (1-12).
+If N/A selected — justification field is not empty.
+For justification fields:
+Score against 5 quality criteria.
+If score below review_required_threshold (3) — flag as Review Required.
+Record which criteria failed.
+For MDRM field:
+Character count 8 or under.
+No fabricated values — only accept if Claude confirms source.
+7.4 — Confidence Score Calculation
+For each UCDE calculate confidence score:
+Semantic similarity delta — 40% weight.
+Number of sections impacted — 30% weight.
+Sensitivity of affected section — 30% weight.
+Final score 0 to 100.
+If score below confidence_threshold (55) — flag as Review Required.
+7.5 — Materiality Assessment
+For Add, Update, Delete, and Review Required UCDEs only:
+Claude assesses whether change is material.
+Returns Y or N flag plus plain language rationale.
+Returns source evidence — exact section and passage reference.
+No Change UCDEs — skip materiality — assign N automatically.
+7.6 — Assemble Change Matrix Row
+Load Section 12 from prompt library.
+Combine all column outputs for this UCDE.
+Produce one complete Change Matrix row:
+UCDE Name, Disposition, Change Summary, Material Y/N,
+Confidence Score, Materiality Rationale, Source Evidence,
+Policy Compliance Status, Compliance Flags, Review Required.
+7.7 — Write UCDE Row to Output Files
+Write completed UCDE row to session UCDD output file.
+Write Change Matrix row to session Change Matrix file.
+Write column-level detail to Audit Log file — one row per column.
+Update session status — Stage 5 and 6 In Progress.
+
+Phase 8 — Output Generation
+8.1 — Full Change Matrix Assembly
+Load Section 13 from prompt library.
+All UCDE rows assembled into complete matrix.
+Sort order:
+Review Required first.
+Add second.
+Update third.
+Delete fourth.
+No Change last.
+Within each group — sort by confidence ascending.
+Generate summary statistics.
+8.2 — Write Change Matrix to Excel
+Open session Change Matrix WIP file.
+Write summary statistics to Summary sheet.
+Write all Change Matrix rows to Change Matrix sheet.
+Apply color coding via conditional formatting already in template.
+Save file.
+8.3 — Write Updated UCDD to Excel
+Open session UCDD WIP file.
+Confirm Use Case Identifier and Name in header.
+Write all UCDE rows to Use Case Dictionary sheet.
+Write sourcing information to Upstream PDE Sourcing sheet.
+Write version entry to Version History sheet.
+Save file.
+8.4 — Write Audit Log to Excel
+Open session Audit Log WIP file.
+Write all column-level processing records.
+Each row represents one column decision for one UCDE.
+AI recommended value, confidence, rule reference, source.
+Reviewer columns left blank — to be filled in Phase 10.
+Save file.
+8.5 — Update Session Status
+Session metadata JSON updated to "ready_for_review".
+Update session status — Stage 8 Complete.
+All progress tracker stages show green checkmarks.
+
+Phase 9 — Frontend Redirects to Dashboard
+9.1 — Processing Complete Detected
+Frontend polling detects status = "ready_for_review".
+Processing page shows "Analysis Complete" message.
+Auto-redirects to dashboard:
+/dashboard.html?session=APM0004862_20260406_143022
+
+Phase 10 — Dashboard — Review Interface
+10.1 — Dashboard Loads
+React dashboard initializes.
+Fetches Change Matrix data from:
+GET /api/results/{session_id}
+Backend reads from session Change Matrix Excel file.
+Returns JSON array of all UCDE rows.
+10.2 — Summary Bar Renders
+Top of dashboard shows five colored stat cards:
+Add count (green)
+Update count (blue)
+Delete count (red)
+No Change count (gray)
+Review Required count (amber)
+Plus Material Y count and overall confidence average.
+10.3 — Change Matrix Table Renders
+Full table with all UCDE rows.
+Disposition badges color coded.
+Confidence score shown as colored progress bar:
+Below 55 — red bar.
+55 to 79 — amber bar.
+80 and above — green bar.
+Review Required rows highlighted with amber row background.
+These rows float to the top automatically.
+10.4 — Filter Bar
+Five toggle buttons — one per disposition type.
+User clicks "Review Required" to see only those rows.
+User clicks "Material Y" to see only material change rows.
+Filters combine — user can select multiple.
+10.5 — Row Click — Detail Panel Opens
+User clicks any UCDE row.
+Slide-in detail panel appears from the right side.
+Panel shows:
+Full UCDE name and disposition.
+All 12 column values with compliance status for each.
+Confidence score breakdown — three weighted components.
+Materiality rationale full text.
+Source evidence with exact section reference.
+Policy compliance flags — which rules were violated.
+Relevant guideline rule text for each flagged column.
+Multi-dimensional approach options if applicable.
+10.6 — Multi-Dimensional Decision (if applicable)
+If UCDE was flagged as multi-dimensional:
+Detail panel shows side-by-side preview of Approach 1 and 2.
+Reviewer selects preferred approach.
+Selection stored before approval.
+10.7 — Reviewer Actions Per Row
+Three buttons on each row and in detail panel:
+✓ Accept — AI recommendation accepted as-is.
+✎ Modify — reviewer edits one or more field values inline.
+✗ Reject — row marked as rejected — excluded from final UCDD.
+Modify flow:
+Reviewer clicks Modify.
+Editable fields appear inline or in the detail panel.
+Reviewer changes values.
+Reviewer clicks Confirm Modification.
+System records original AI value and reviewer's new value.
+Override flag set to Y in audit log.
+10.8 — Progress Tracking
+Dashboard shows running tally at the bottom:
+"4 of 6 UCDEs reviewed — 2 remaining"
+Submit for Approval button stays disabled until all rows are actioned.
+10.9 — Download Options Available Before Approval
+Two download buttons in the top right:
+"Download Change Matrix (WIP)" — downloads current Excel.
+"Download UCDD Draft (WIP)" — downloads current Excel.
+These are available at any time — reviewer can review Excel offline.
+
+Phase 11 — Final Approval
+11.1 — Reviewer Clicks Submit for Approval
+All rows must be actioned before button activates.
+Confirmation dialog shown:
+"You are about to submit the final UCDD update for
+APM0004862. This will generate the approved versions
+of all output files. Confirm?"
+11.2 — Backend Processes Final Approval
+Receives approval request with:
+Session ID.
+All reviewer decisions — Accept, Modify, Reject per row.
+All modified field values where reviewer changed AI output.
+Reviewer ID.
+11.3 — Final Audit Log Written
+For every UCDE row and every column:
+AI recommended value recorded.
+Reviewer decision recorded.
+If modified — reviewer value recorded.
+Override Y/N flag set.
+Review timestamp written.
+Reviewer ID written.
+Guideline rule reference written for every flagged item.
+Source document and source section written.
+11.4 — Final Output Files Generated
+Apply only accepted and modified rows to UCDD.
+Rejected rows excluded from final UCDD.
+Rename all three output files from WIP to date stamp:
+APM0004862_CHANGE_MATRIX_202604.xlsx
+APM0004862_UCDD_202604.xlsx
+APM0004862_AUDIT_LOG_202604.xlsx
+Version History sheet updated — approval date written.
+Session metadata updated to "approved".
+11.5 — Dashboard Updates
+Dashboard shows "Approved" status banner.
+Three download buttons now available for final files:
+"Download Final Change Matrix"
+"Download Final Updated UCDD"
+"Download Audit Log"
+Session listed as Approved in session history.
+
+Gaps Identified and Addressed
+Here are the items that were missing or unclear before this audit:
+PPTX format now included in all upload zones and parsing steps. This was missing in earlier architecture discussions and is critical because both sample reports are PowerPoint files.
+Scanned PDF handling — flagged as unsupported for hackathon. If reports are image-based PDFs text extraction will fail. User should be warned to upload text-based PDFs or convert scanned PDFs first.
+Session history — not previously planned but now part of the dashboard. Allows multiple runs without overwriting.
+Multi-dimensional decision — now correctly placed in the dashboard as a human decision point — not auto-resolved by AI.
+Early exit flow — fully mapped. If triggered it skips Phases 6 and 7 and jumps directly to Phase 8 with all No Change dispositions.
+Reject disposition — added to reviewer actions. Previously only Accept and Modify were planned. Reject is important for cases where the AI generated a completely wrong row.
+Processing page with named stages — prevents the blank screen problem during AI processing. Judges see the pipeline running live.
+Metadata confirmation — ADMF identifier confirmed before any column processing begins. Previously this was mentioned but not placed correctly in the flow.
+Download before approval — WIP files downloadable at any time. Previously only final files were mentioned. Reviewers often want to review in Excel before completing the dashboard workflow.
+
+Final Checklist Before Coding
+ARTIFACTS READY:
+□ guideline_rules.txt — field descriptions inserted
+□ UCDD_MASTER_PROMPT_LIBRARY.txt — complete
+□ prompt_routing_map.json — complete
+□ system_config.json — complete
+□ admf_identifier_lookup.json — to be built
+□ dq_check_validation.json — to be built
+□ CHANGE_MATRIX_TEMPLATE.xlsx — to be built
+□ UCDD_OUTPUT_TEMPLATE.xlsx — to be built
+□ AUDIT_LOG_TEMPLATE.xlsx — to be built
+□ .env — to be populated on hackathon day with API key
+
+ACTUAL FILES NEEDED FROM CLIENT:
+□ Doc 1 — original report (actual PPTX or PDF file)
+□ Doc 2 — updated report (actual PPTX or PDF file)
+□ Sample UCDD — actual Excel file with both tabs
+□ UCDD Template — actual blank Excel file
+
+DEMO ARTIFACTS:
+□ Demo script — step by step
+□ Backup pre-generated output
+□ Judging criteria response card
+□ Role assignment document
+□ Architecture diagram (done)

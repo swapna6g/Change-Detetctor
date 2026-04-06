@@ -1,0 +1,1033 @@
+=== UCDD GUIDELINE RULES REFERENCE ===
+Version: 3.0
+Last Updated: April 2026
+
+================================================
+HOW TO USE THIS FILE
+================================================
+
+This file is a structured rules reference used by the AI
+for UCDD compliance validation and population.
+
+It is organized into three parts:
+
+  PART A — MODE DEFINITIONS
+  Defines Mode 1 (Change Detection) and Mode 2 (New Report).
+  Mode 1 is the primary mode for this hackathon.
+  Mode 2 is plug-and-play — included but not required.
+  To disable Mode 2: ignore all sections marked [MODE 2 ONLY].
+  To enable Mode 2: no changes needed — simply activate it
+  via the processing_mode variable in your code.
+
+  PART B — COLUMN-BY-COLUMN RULES
+  One section per exact UCDD template column name.
+  Rules apply in BOTH modes unless explicitly marked otherwise.
+  Insert your field descriptions where marked [INSERT DESCRIPTION].
+
+  PART C — SUPPORTING REFERENCE RULES
+  Multi-dimensional elements, file naming, DQ ecosystem,
+  justification quality scoring.
+
+================================================
+PART A — MODE DEFINITIONS
+================================================
+
+--------------------------------------------------
+[MODE 1 — ACTIVE FOR HACKATHON — Change Detection]
+--------------------------------------------------
+
+LABEL: Mode 1 — Change Detection Mode
+STATUS: PRIMARY MODE — implement this first
+
+WHEN ACTIVE:
+  - Prior approved report EXISTS
+  - Existing populated UCDD EXISTS
+  - User uploads: new report + prior report + existing UCDD
+
+WHAT THE SYSTEM DOES:
+  - Compares new report against prior approved report
+  - Identifies what changed semantically and structurally
+  - Maps changes to affected UCDEs in existing UCDD
+  - Assigns disposition to every UCDE — including unchanged ones
+  - Populates or updates UCDD fields only where change detected
+  - Carries forward unchanged field values from existing UCDD
+
+AVAILABLE DISPOSITIONS:
+  - Add          — new element found in new report
+  - Update       — existing element changed in new report
+  - Delete       — existing element removed from new report
+  - No Change    — element confirmed unchanged
+  - Review Required — ambiguous — human judgment needed
+
+MATERIALITY INTERPRETATION:
+  - Materiality flag Y means: the change is significant enough
+    to impact downstream reporting, regulatory submissions,
+    or governance decisions
+  - Materiality flag N means: change is minor — documentation
+    update only — no downstream impact expected
+
+CARRY FORWARD RULE:
+  - For No Change rows: carry forward ALL existing field values
+    unchanged — do not regenerate
+  - For Update rows: carry forward unchanged fields only —
+    regenerate only the fields impacted by the detected change
+  - For Delete rows: flag row — do not remove until
+    human reviewer confirms
+
+--------------------------------------------------
+[MODE 2 — PLUG AND PLAY — New Report]
+--------------------------------------------------
+
+LABEL: Mode 2 — New Report Mode
+STATUS: OPTIONAL — plug in when needed — skip if not required
+
+TO ENABLE MODE 2:
+  Set processing_mode = "Mode 2" in your code.
+  Activate Section 11 in UCDD_MASTER_PROMPT_LIBRARY.txt.
+  Show two-zone upload UI instead of three-zone.
+  No other changes needed.
+
+TO DISABLE MODE 2:
+  Set processing_mode = "Mode 1" as default.
+  Skip Section 11 in UCDD_MASTER_PROMPT_LIBRARY.txt.
+  Ignore all [MODE 2 ONLY] tags in this file.
+  No column rules need to change.
+
+WHEN ACTIVE:
+  - NO prior approved report exists
+  - NO existing UCDD exists
+  - User uploads: new report only
+  - UCDD Template is pre-loaded by system
+
+WHAT THE SYSTEM DOES:
+  - Discovers all data elements from the new report
+  - Creates every UCDE row from scratch
+  - Populates all 12 columns for every discovered element
+  - No comparison performed — nothing to compare against
+
+AVAILABLE DISPOSITIONS:
+  - Add              — every discovered element is new
+  - Review Required  — element is ambiguous or unclear
+  NOTE: Delete / Update / No Change are NOT valid in Mode 2
+
+MATERIALITY INTERPRETATION IN MODE 2:
+  - Materiality flag Y means: this element represents a
+    high-sensitivity metric requiring close governance review
+    of its initial documentation
+  - High sensitivity indicators:
+    * Regulatory submission metrics
+    * Substantiation or violation rates
+    * Whistleblower or legal matter counts
+    * Any element feeding external reporting
+  - Materiality flag N means: standard element —
+    review recommended but not urgent
+
+CARRY FORWARD RULE:
+  - Not applicable — no existing values exist
+  - Every field must be generated from scratch
+  - Every row is Review Required until human approves
+
+================================================
+PART B — COLUMN-BY-COLUMN RULES
+================================================
+
+NOTE TO AI:
+  When this document is provided to you treat every rule
+  listed under each exact column name as a hard constraint.
+  Do not deviate from valid values listed.
+  Do not infer column names — use them exactly as written.
+  Column rules apply in BOTH modes unless tagged [MODE 2 ONLY]
+  or [MODE 1 ONLY].
+
+--------------------------------------------------
+METADATA: "Use Case Identifier"
+--------------------------------------------------
+
+EXACT COLUMN NAME: Use Case Identifier
+CONDITION: Required
+CHARACTER LIMIT: Must match ADMF exactly
+
+FIELD DESCRIPTION:
+[INSERT DESCRIPTION]
+Example: "Unique identifier found in ADMF for each Use Case.
+This identifier is the authoritative reference that links
+the UCDD to the enterprise Use Case Inventory."
+
+RULES:
+  - Value must come from ADMF — cannot be inferred from document
+  - Must match exactly — no variations or abbreviations permitted
+  - External Entry — sourced from Use Case Inventory in ADMF
+  - System will not proceed if this is unconfirmed
+
+VALID VALUES: Any valid ADMF identifier string
+INVALID VALUES: Any value not registered in ADMF
+
+MODE 1 BEHAVIOR: Confirm identifier matches existing UCDD header
+MODE 2 BEHAVIOR: Confirm identifier with user — no existing UCDD to check against
+
+VALIDATION OUTCOME:
+  Pass:   Value confirmed against ADMF
+  Fail:   Value not found or not confirmed
+  Action on Fail: Block processing — escalate to user
+
+--------------------------------------------------
+METADATA: "Use Case Name"
+--------------------------------------------------
+
+EXACT COLUMN NAME: Use Case Name
+CONDITION: Required
+CHARACTER LIMIT: Must match ADMF exactly
+
+FIELD DESCRIPTION:
+[INSERT DESCRIPTION]
+Example: "The name of the Use Case as it appears in the
+Use Case Inventory in ADMF. The Use Case Name should
+match the Use Case Identifier above."
+
+RULES:
+  - Must match Use Case Identifier above
+  - Source is Use Case Inventory in ADMF
+  - Cannot be inferred from document title alone
+  - Must be confirmed before any row processing begins
+
+MODE 1 BEHAVIOR: Carry forward from existing UCDD header
+MODE 2 BEHAVIOR: Confirm with user at submission
+
+--------------------------------------------------
+COLUMN 1: "Use Case Element Name"
+--------------------------------------------------
+
+EXACT COLUMN NAME: Use Case Element Name
+CONDITION: Required
+CHARACTER LIMIT: 1024
+
+FIELD DESCRIPTION:
+[INSERT DESCRIPTION]
+Example: "Provides the element name for an individual item
+as it appears in the use case, adjusted to meet Enterprise
+standards applied to use case element names.
+Note: For regulatory reports, the exact name as it appears
+in the report may be used."
+
+MANDATORY STANDARDS:
+  1. Use the English language
+  2. Enter unique Use Case Element Names within this use case
+     Use prefixes if needed to ensure uniqueness
+  3. Adhere to enterprise tooling character limit of 1024
+  4. Use correct spelling and capitalization
+     Capitalize first letter of each word
+  5. Spell out acronyms using this format:
+     Spelled Out Acronym (SOA)
+  6. For regulatory reports only:
+     Copy use case element name directly from report
+
+RECOMMENDATIONS:
+  - Ensure prefix (schedule, section, line etc.) is included
+    at beginning of name where applicable
+  - Include appropriate Class Word to describe the data
+  - State element name in singular form
+  - Avoid special characters and abbreviations
+
+UNIQUENESS RULES:
+  - Name must be unique to this individual use case
+  - When same field appears multiple times use reference
+    numbers or section headers to establish uniqueness
+  - Certain internal use cases require reference numbers
+    to designate two different elements in the same use case
+
+REGULATORY REPORT SPECIAL RULE:
+  - For regulatory reports: exact name from report may be
+    used as-is to maintain traceability
+  - For regulatory reports acting as risk reports:
+    refer to Regulatory Reports acting as Risk Report
+    Overview in Appendix
+
+MODE 1 BEHAVIOR:
+  - No Change disposition: carry forward existing value unchanged
+  - Update disposition: validate existing name and update if
+    naming standard was violated or element was renamed in report
+  - Add disposition: generate compliant name from source evidence
+
+MODE 2 BEHAVIOR:
+  - Generate compliant name from raw element name in report
+  - Apply all naming standards above
+  - Flag as Review Required if name cannot be clearly derived
+
+VALID EXAMPLES:
+  "3.2.2: Closed Allegations"
+  "4.1.1: Count Of Opened Matter By Calendar Year"
+  "3.2.3: Substantiation Rate"
+
+INVALID EXAMPLES:
+  "closed_allegations"       — underscore not permitted
+  "CA"                       — abbreviation not spelled out
+  "closed allegations count" — not title case
+
+--------------------------------------------------
+COLUMN 2: "Use Case Element Description"
+--------------------------------------------------
+
+EXACT COLUMN NAME: Use Case Element Description
+CONDITION: Required
+CHARACTER LIMIT: 4000
+
+FIELD DESCRIPTION:
+[INSERT DESCRIPTION]
+Example: "Describes the business meaning or semantics of
+the use case element, written in clear, concise, English
+language that can be easily understood by data consumers."
+
+MANDATORY STANDARDS:
+  1. Use the English language
+  2. Use good grammar, correct spelling, appropriate
+     punctuation and appropriate capitalization
+  3. Avoid circular reasoning — do not define a term
+     using the term itself
+  4. Do NOT start description with the word "This"
+  5. Spell out acronyms: Spelled Out Acronym (SOA)
+     and explain all abbreviations
+  6. Write a description that stands alone — must not
+     require other descriptions or external documentation
+     to give a complete meaning
+
+RECOMMENDATIONS:
+  - State the description precisely:
+    what it IS versus what it IS NOT
+  - State description in singular form
+  - Write in readable plain English
+  - Avoid programming language
+  - Follow Wells Fargo Style Guide where applicable
+
+EXTERNAL USE CASE RULE:
+  - Standard definitions already documented should be
+    leveraged to complete element descriptions
+  - Definitions can sometimes be found in supplemental
+    information, instructions, or guidance sections
+    provided by the external source
+
+INTERNAL USE CASE RULE:
+  - Provide business meaning or semantics for the element
+  - Must be based on content of the element
+  - Written in clear concise English for data consumers
+
+REGULATORY REPORT NOTE:
+  - For regulatory reports acting as risk reports refer
+    to Regulatory Reports acting as Risk Report Overview
+    in Appendix
+
+MODE 1 BEHAVIOR:
+  - No Change disposition: carry forward existing description
+  - Update disposition: revise description to reflect detected
+    change — preserve unchanged portions of existing description
+  - Add disposition: generate new compliant description
+
+MODE 2 BEHAVIOR:
+  - Generate description from scratch using source evidence
+  - Base it on content visible in the report
+  - Must satisfy all mandatory standards above
+
+VALID EXAMPLE:
+  "Count of closed employee-reported allegations for a given
+  period. Allegation is written or verbal report of Rate of
+  substantiated allegations, for a given period, where
+  employee-reported allegation was substantiated."
+
+INVALID EXAMPLES:
+  "This is the count field"               — starts with This
+  "See Closed Allegations definition"     — circular/dependent
+  "clsd_alg_cnt from ALG_V1 table"       — programming language
+
+--------------------------------------------------
+COLUMN 3: "*Use Case Hierarchy Level 1"
+--------------------------------------------------
+
+EXACT COLUMN NAME: *Use Case Hierarchy Level 1
+CONDITION: Required if applicable to a given Use Case
+           Asterisk denotes conditional requirement
+CHARACTER LIMIT: 1024
+
+FIELD DESCRIPTION:
+[INSERT DESCRIPTION]
+Example: "Provides the top level section header for a use
+case such as a report schedule or section."
+
+RULES:
+  - Hierarchy Level 1 is the highest level for distinguishing
+    a potential Use Case Element
+  - Optional for internal use cases
+  - Required if applicable for external use cases
+  - Can be populated in several ways depending on type:
+    * Regulatory Reporting Schedules or Sections
+    * Top level categories
+    * Header sections within a report
+  - Goal: categorize data to aid searching and viewing
+    use case metadata
+
+MODE 1 BEHAVIOR:
+  - No Change: carry forward existing value unchanged
+  - Update: revise only if report structure changed
+  - Add: derive from source section in report
+
+MODE 2 BEHAVIOR:
+  - Derive from report structure discovered during
+    element discovery phase
+  - Use section headers from report as Level 1 candidates
+
+VALID EXAMPLES:
+  "3. Conduct: All Allegations from 3.2: Employee-Reported"
+  "M.1: Balances"
+  "Schedule G: PPNR Submission"
+
+NOT APPLICABLE CONDITION:
+  - If use case has no hierarchical structure leave blank
+  - Document reason in processing notes
+
+--------------------------------------------------
+COLUMN 4: "*Use Case Hierarchy Level 2"
+--------------------------------------------------
+
+EXACT COLUMN NAME: *Use Case Hierarchy Level 2
+CONDITION: Required if applicable to a given Use Case
+           Asterisk denotes conditional requirement
+CHARACTER LIMIT: 1024
+
+FIELD DESCRIPTION:
+[INSERT DESCRIPTION]
+Example: "When needed, provides a further detailed breakout
+of the Hierarchy Level 1 Section such as an individual line
+item when multiple columns exist."
+
+RULES:
+  - Provided as optional field to further breakdown a report
+  - Potential uses:
+    * Line items for multi-column reports
+    * Reports with multiple hierarchy within single report
+  - Designed to aid readability and presentation when viewing
+    use case metadata in tooling environment
+  - Only populate when Level 1 alone does not sufficiently
+    distinguish elements from each other
+
+MODE 1 BEHAVIOR:
+  - No Change: carry forward existing value unchanged
+  - Update: revise only if sub-section structure changed
+  - Add: derive from report sub-section
+
+MODE 2 BEHAVIOR:
+  - Derive from report sub-section structure
+  - Only populate when Level 1 is not specific enough
+
+VALID EXAMPLES:
+  "M.1.1: Loans secured by real estate"
+  "G.1: Retail and Small Business"
+  "3.2: Employee-Reported Allegations"
+
+--------------------------------------------------
+COLUMN 5: "MDR M"
+--------------------------------------------------
+
+EXACT COLUMN NAME: MDR M
+CONDITION: Required if applicable to a given Use Case
+CHARACTER LIMIT: 8
+
+FIELD DESCRIPTION:
+[INSERT DESCRIPTION]
+Example: "The Micro Data Reference Manual (MDRM) is a
+catalog of data series included in the Board of Governors
+of the Federal Reserve System's micro data (Structure and
+Financial) files."
+
+RULES:
+  - Only applicable for regulatory reports where this field
+    exists on those reports
+  - Used to identify an individual use case element on report
+  - Some regulatory reports may not have MDRM codes for each
+    element — provide when it does exist
+  - Character limit is 8
+  - Do NOT fabricate or guess MDRM codes
+  - Only populate if code is explicitly visible in source report
+
+MODE 1 BEHAVIOR:
+  - No Change: carry forward existing value unchanged
+  - Update: verify code still matches updated report
+  - Add: extract code from new report if visible
+
+MODE 2 BEHAVIOR:
+  - Extract code from report if visible
+  - Leave blank if code does not exist — do not write N/A
+  - Flag as Review Required if code existence is uncertain
+
+VALID FORMAT EXAMPLES:
+  "CALBP328"
+  "CALBP332"
+
+NOT APPLICABLE CONDITION:
+  - Report is not a Federal Reserve regulatory report
+  - MDRM code does not exist for this element in source report
+  - Leave blank — do not write N/A
+
+--------------------------------------------------
+COLUMN 6: "Accuracy Dimension"
+COLUMN 7: "Accuracy Dimension [MULTI]"
+COLUMN 8: "Accuracy Dimension N/A Justification"
+--------------------------------------------------
+
+NOTE: These three columns are a conditional group.
+Column 6 value determines whether Column 7 or 8 is required.
+
+EXACT COLUMN NAME (6): Accuracy Dimension
+CONDITION: Required
+CHARACTER LIMIT: N/A — select from dropdown value
+
+FIELD DESCRIPTION FOR COLUMN 6:
+[INSERT DESCRIPTION]
+Example: "This field will be used by the use case owner to
+identify the type of DQ check that should be implemented to
+verify if the data consumed by the use case is accurate.
+If the use case owner expects more than one DQ check to be
+implemented, the value of Multiple must be selected.
+If no accuracy DQ checks are expected by the use case owner,
+the value of N/A must be selected."
+
+VALID DROPDOWN VALUES FOR COLUMN 6 ONLY:
+  - Single check number from the list below (1 through 12)
+  - "Multiple"  — when more than one check applies
+  - "N/A"       — when no accuracy checks are possible
+
+CONDITIONAL TRIGGER:
+  - Column 6 = single number  → Columns 7 and 8 NOT required
+  - Column 6 = "Multiple"     → Column 7 BECOMES REQUIRED
+  - Column 6 = "N/A"          → Column 8 BECOMES REQUIRED
+
+EXACT COLUMN NAME (7): Accuracy Dimension [MULTI]
+CONDITION: Required ONLY if Column 6 = "Multiple"
+CHARACTER LIMIT: 50
+
+FIELD DESCRIPTION FOR COLUMN 7:
+[INSERT DESCRIPTION]
+Example: "This field identifies the numeric values
+representing the DQ checks that the use case owner expects
+to be implemented to confirm the use case data is accurate."
+
+RULES FOR COLUMN 7:
+  - Populate ONLY when Column 6 = "Multiple"
+  - Enter check numbers separated by commas
+  - No spaces after commas
+  - Numbers must be from valid list 1 through 12
+  - Maximum 50 characters total
+
+VALID FORMAT EXAMPLES FOR COLUMN 7:
+  "1,6,8"
+  "5,11"
+  "3,4,7"
+
+INVALID FORMAT EXAMPLES FOR COLUMN 7:
+  "1, 6, 8"          — spaces not permitted
+  "one,six,eight"    — must be numbers not words
+  "1,6,15"           — 15 is not a valid check number
+
+EXACT COLUMN NAME (8): Accuracy Dimension N/A Justification
+CONDITION: Required ONLY if Column 6 = "N/A"
+CHARACTER LIMIT: 4000
+
+FIELD DESCRIPTION FOR COLUMN 8:
+[INSERT DESCRIPTION]
+Example: "This field will contain the use case owner's
+justification for identifying the Accuracy dimension as N/A
+(not applicable). The justification should provide an
+explanation that clearly defends not implementing any DQ
+checks to verify if the use case data is accurate."
+
+RULES FOR COLUMN 8:
+  See JUSTIFICATION QUALITY RULES in Part C below.
+  All five justification criteria apply to this column.
+
+DQ CHECK COMPLETE NUMBER REFERENCE (Columns 6 and 7):
+
+  CHECK 1: Accuracy Check Against Master Data
+  Definition: Verifies if the data element value matches a
+  data value in a linked master data table (authoritative
+  source for the data)
+  Example: Checking zip code against USPS zip code master table
+  USE FOR: Elements that must match a reference master table
+
+  CHECK 2: Valid Value Check
+  Definition: Verifies if the data element value is one of
+  the approved data element values in a reference data table
+  or valid values selected from dropdowns or radio buttons
+  Example: Product Name selected from approved dropdown list
+  USE FOR: Elements with a defined set of valid values
+
+  CHECK 3: Valid Date Check
+  Definition: Verifies that only valid calendar dates can be
+  selected using calendar pop-up or by comparing to a
+  back-end system calendar
+  Example: Customer Date of Birth validated by calendar pop-up
+  USE FOR: DATE FIELDS ONLY — not for counts or text
+
+  CHECK 4: Date Range Check
+  Definition: Verifies if the data element date value falls
+  within a predefined date range
+  Example: Sales Date verified within approved date range
+  USE FOR: DATE RANGE VALIDATION ONLY — not for counts
+
+  CHECK 5: Numeric Range Check
+  Definition: Verifies if a numeric data element value is
+  within a predefined numeric range
+  Example: Customer Age verified between 18 and 65
+  USE FOR: NUMERIC AND COUNT FIELDS
+
+  CHECK 6: Duplicate Value Check
+  Definition: Verifies if the data element value entered is
+  not a duplicate already entered for that specific element
+  Example: System checks for any repeated Employee IDs
+  USE FOR: Fields that must contain unique entries
+
+  CHECK 7: Data Format / Layout Check
+  Definition: Verifies if the data element value entered
+  conforms to the specified or defined data format or layout
+  Example: SSN verified in format XXX-XX-XXXX
+  USE FOR: Fields with strict format requirements
+
+  CHECK 8: Data Length / # of Characters Check
+  Definition: Verifies if the data element value entered
+  conforms to the specified data length or number of characters
+  Example: SSN verified to be exactly 9 digits
+  USE FOR: Fields with strict character count requirements
+
+  CHECK 9: Data Precision / Decimal Places Check
+  Definition: Verifies if the data element value entered
+  conforms to the specified precision — number of numeric
+  digits to the right of the decimal place
+  Example: Note rate value verified to 2 decimal places
+  USE FOR: Numeric fields with decimal precision requirements
+
+  CHECK 10: Invalid Characters Check
+  Definition: Verifies if the data element value entered
+  contains any specified or defined invalid characters
+  Example: System blocks entry of special characters !@#$%&?
+  USE FOR: Text fields where special characters must be excluded
+
+  CHECK 11: Business Logic / Rule Driven Content
+  Definition: Verifies if the data element value adheres to
+  specific business defined logic or rule
+  Example: Customer Date of Death verified to be after
+  Customer Date of Birth
+  USE FOR: CALCULATED OR DERIVED FIELDS
+  NOTE: Almost always required for aggregated metrics and rates
+
+  CHECK 12: Conditional Field / Value Check
+  Definition: Based on value in one data element, verifies if
+  the data element being entered or was entered meets the
+  defined condition
+  Example: If Loan Status is Approved then Loan Approver Name
+  must be populated with one of the designated approver names
+  USE FOR: Fields whose validity depends on another field
+
+DATA TYPE TO CHECK NUMBER MAPPING:
+  Numeric count fields       → 5, 11 most appropriate
+  Rate or percentage fields  → 5, 9, 11 most appropriate
+  Date fields                → 3, 4 most appropriate
+  Text fields                → 2, 10 most appropriate
+  Calculated derived fields  → 11 almost always required
+  Fields matching master data → 1 required
+  Fields with approved value sets → 2 required
+  Fields dependent on other fields → 12 required
+
+MODE 1 BEHAVIOR:
+  No Change: carry forward Columns 6, 7, 8 unchanged
+  Update: reassess check selection if data type or
+  calculation logic changed in new report
+  Add: select appropriate checks for new element
+
+MODE 2 BEHAVIOR:
+  Generate check selection from scratch for every element
+  Base selection on data type determined during discovery
+  Flag as Review Required if data type cannot be confirmed
+
+--------------------------------------------------
+COLUMN 9: "Completeness Dimension"
+COLUMN 10: "Completeness Dimension N/A Justification"
+--------------------------------------------------
+
+NOTE: These two columns are a conditional group.
+Column 9 value determines whether Column 10 is required.
+
+EXACT COLUMN NAME (9): Completeness Dimension
+CONDITION: Required
+CHARACTER LIMIT: N/A — select from dropdown value
+
+FIELD DESCRIPTION FOR COLUMN 9:
+[INSERT DESCRIPTION]
+Example: "This field will be used by the use case owner to
+identify the type of DQ check that should be implemented to
+verify if the data consumed by the use case is complete.
+If no completeness DQ checks are expected by the use case
+owner, the value of N/A must be selected."
+
+VALID DROPDOWN VALUES FOR COLUMN 9 ONLY:
+  - "Missing / Blank Value Check"
+  - "Conditional Field / Value Check"
+  - "Business Logic / Rule Driven Content"
+  - "N/A"
+
+IMPORTANT: NO Multiple option exists for Completeness.
+
+CONDITIONAL TRIGGER:
+  - Column 9 = any valid check → Column 10 NOT required
+  - Column 9 = "N/A"          → Column 10 BECOMES REQUIRED
+
+DQ CHECK DEFINITIONS FOR COMPLETENESS:
+
+  Missing / Blank Value Check:
+  Definition: Verifies if a value is entered when it is a
+  mandatory or required field
+  Example: System requires analyst to enter Loan Amount
+  before proceeding to next screen
+  USE FOR: Fields that must always be populated
+
+  Conditional Field / Value Check:
+  Definition: Based on value in one data element, verifies
+  if the data element being entered meets the defined
+  condition — a value must be populated
+  Example: System requires Loan Default Reason if Loan
+  Status is set to Default
+  USE FOR: Fields required only when another field has
+  a specific value
+
+  Business Logic / Rule Driven Content:
+  Definition: Verifies if the data element value adheres
+  to specific business defined logic or rule
+  Example: If Loan Status is Sold then Sale Date must
+  be populated — if not populated system flags for correction
+  USE FOR: Completeness governed by business rules
+
+EXACT COLUMN NAME (10): Completeness Dimension N/A Justification
+CONDITION: Required ONLY if Column 9 = "N/A"
+CHARACTER LIMIT: 4000
+
+FIELD DESCRIPTION FOR COLUMN 10:
+[INSERT DESCRIPTION]
+Example: "This field will contain the use case owner's
+justification for identifying the Completeness dimension
+as N/A (not applicable). The justification should provide
+an explanation that clearly defends not implementing any
+DQ checks to verify if the use case data is complete."
+
+RULES FOR COLUMN 10:
+  See JUSTIFICATION QUALITY RULES in Part C below.
+  All five justification criteria apply to this column.
+
+MODE 1 BEHAVIOR:
+  No Change: carry forward Columns 9 and 10 unchanged
+  Update: reassess only if data source type changed
+  Add: select appropriate completeness check
+
+MODE 2 BEHAVIOR:
+  Generate selection from scratch for every element
+  Flag as Review Required if mandatory status unclear
+
+--------------------------------------------------
+COLUMN 11: "Timeliness Dimension"
+COLUMN 12: "Timeliness Dimension N/A Justification"
+--------------------------------------------------
+
+NOTE: These two columns are a conditional group.
+Column 11 value determines whether Column 12 is required.
+
+EXACT COLUMN NAME (11): Timeliness Dimension
+CONDITION: Required
+CHARACTER LIMIT: N/A — select from dropdown value
+
+FIELD DESCRIPTION FOR COLUMN 11:
+[INSERT DESCRIPTION]
+Example: "This field will be used by the use case owner to
+identify the type of DQ check that should be implemented to
+verify if the data consumed by the use case is timely.
+If no timeliness DQ checks are expected by the use case
+owner, the value of N/A must be selected."
+
+VALID DROPDOWN VALUES FOR COLUMN 11 ONLY:
+  - "Data Delivery Check"
+  - "N/A"
+
+CRITICAL NOTE: NO Multiple option exists for Timeliness.
+Only ONE check type exists for this entire dimension.
+
+CONDITIONAL TRIGGER:
+  - Column 11 = "Data Delivery Check" → Column 12 NOT required
+  - Column 11 = "N/A"                 → Column 12 BECOMES REQUIRED
+
+DQ CHECK DEFINITION FOR TIMELINESS:
+
+  Data Delivery Check:
+  Definition: Ensures that the file or feed was received
+  (pushed or pulled) within the agreed upon SLA
+  Example: Ensure timely delivery for identifying Daily Cash
+  Flow and Liquidity Coverage Ratio using automated monitoring
+  to track deadlines flagging any delays or incomplete sections
+  and taking corrective action to meet regulatory compliance
+  USE FOR: All elements sourced from data feeds or pipelines
+  NOTE: Implemented as a data movement check for data loaded
+  into the approved data source (ADS)
+
+EXACT COLUMN NAME (12): Timeliness Dimension N/A Justification
+CONDITION: Required ONLY if Column 11 = "N/A"
+CHARACTER LIMIT: 4000
+
+FIELD DESCRIPTION FOR COLUMN 12:
+[INSERT DESCRIPTION]
+Example: "This field will contain the use case owner's
+justification for identifying the Timeliness dimension as
+N/A (not applicable). The justification should provide an
+explanation that clearly defends not implementing any DQ
+checks to verify if the use case data is timely."
+
+RULES FOR COLUMN 12:
+  See JUSTIFICATION QUALITY RULES in Part C below.
+  All five justification criteria apply to this column.
+  Most common N/A scenario: externally hosted third-party
+  application that does not allow data movement checks.
+
+MODE 1 BEHAVIOR:
+  No Change: carry forward Columns 11 and 12 unchanged
+  Update: reassess only if data source changed
+  Add: select appropriate timeliness check
+
+MODE 2 BEHAVIOR:
+  Generate selection from scratch for every element
+  Flag as Review Required if data source type unclear
+
+================================================
+PART C — SUPPORTING REFERENCE RULES
+================================================
+
+--------------------------------------------------
+JUSTIFICATION QUALITY RULES
+(Applies to Columns 8, 10, and 12 when N/A selected)
+--------------------------------------------------
+
+The use case owner must provide a clear justification when
+any of the three DQ dimensions is not needed or is not
+expected to be met by data quality checks.
+
+A justification is scored against 5 criteria.
+Each criterion is pass or fail.
+Score = number of criteria passed out of 5.
+Score below 3 out of 5 = flag as Review Required.
+
+CRITERION 1 — Explains Why (Required)
+  Does it explicitly state why the DQ dimension does not
+  apply or cannot be implemented?
+  Pass: Clear explanation present
+  Fail: Vague or missing explanation
+
+CRITERION 2 — References ADS Type (Required)
+  Does it name the specific type of data source?
+  Pass: ADS type named — choose from:
+    - Approved ADS
+    - External third-party data source provider
+      (e.g. Bloomberg, Experian)
+    - Non-application source
+      (EUCT, model, Excel file, Email)
+    - Externally hosted third-party application
+      (e.g. Aspen Grove, Black Knight)
+  Fail: Generic reference or no ADS type mention
+
+CRITERION 3 — References Data Control Number (Important)
+  Does it include a data control reference?
+  Format: #C-XXXXX
+  Pass: Control number present
+  Fail: No control number — flag for human to complete
+  Unknown: Control number may exist but not available in
+  current context — mark as incomplete for reviewer
+
+CRITERION 4 — Not Vague (Required)
+  Is the justification specific and substantive?
+  Pass: Specific explanation with context
+  Fail: Generic one-liner without meaningful detail
+
+CRITERION 5 — Under 4000 Characters (Required)
+  Pass: Character count confirmed under 4000
+  Fail: Exceeds 4000 — must be shortened before output
+
+UNACCEPTABLE JUSTIFICATION EXAMPLES:
+  "We follow different rules."
+  "No need for accuracy dimension in this scenario."
+  "This data does not need accuracy checks."
+
+ACCEPTABLE JUSTIFICATION EXAMPLES:
+
+  For Accuracy N/A:
+  "The approved data source (ADS) is an external third-party
+  data source provider that does not allow Wells Fargo to
+  implement automated data quality (DQ) checks. See data
+  control #C-22222 for how the data accuracy is verified
+  within the use case process."
+
+  For Completeness N/A:
+  "The approved data source (ADS) is a non-application and
+  automated data checks cannot be implemented. See data
+  control #C-33333 for how the data completeness is verified
+  within the use case process."
+
+  For Timeliness N/A:
+  "The approved data source (ADS) is an externally hosted
+  third-party application that does not allow Wells Fargo to
+  implement automated data movement checks for timeliness.
+  See data control #C-44444 for how the data timeliness is
+  verified within the use case process."
+
+--------------------------------------------------
+MULTI-DIMENSIONAL ELEMENT HANDLING
+--------------------------------------------------
+
+NOT A COLUMN — This is a processing decision made before
+rows are written to the UCDD.
+
+APPLIES WHEN: Same element appears across multiple
+dimensions such as by country, by segment, by time period.
+
+DEFINITION: A multi-dimensional use case element presents
+data in more than a simple 2-dimensional table — the same
+element repeated multiple times based on an additional
+data dimension.
+
+TWO VALID APPROACHES — BOTH ARE ACCEPTABLE:
+
+APPROACH 1 — Document All Use Case Elements Separately:
+  Create one separate UCDE row per dimension value.
+  Element name includes dimension value as suffix.
+  Example:
+    "C_09_01_a_0010_0050_BR_qABJ"  for Brazil
+    "C_09_01_a_0010_0050_EE_qABJ"  for Estonia
+    "C_09_01_a_0010_0050_SG_qABJ"  for Singapore
+  USE WHEN: Each dimension value is uniquely calculated
+  or derived differently from other dimension values.
+
+APPROACH 2 — Document Unique Use Case Elements Only:
+  Create one single UCDE row with BY_DIMENSION notation.
+  Example:
+    "C_09_01_a_0010_0050_BY_COUNTRY"
+  Description acknowledges dimension exists but does
+  not list individual dimension values.
+  USE WHEN: Dimensional elements are created by filtering,
+  summarizing, or pivoting unique data — not uniquely
+  calculated per dimension.
+  This satisfies the objective of documenting all unique
+  use case elements without creating redundant rows.
+
+DECISION CRITERIA:
+  Uniquely calculated per dimension → Approach 1
+  Filtered or summarized view of same calculation → Approach 2
+  Cannot determine from source document → Flag as Review Required
+  Present both options to human reviewer with preview
+
+MODE 1 BEHAVIOR:
+  If existing UCDD uses Approach 1 and new report removes
+  a dimension: Delete the removed dimension rows.
+  If existing UCDD uses Approach 2 and new report adds
+  a dimension: Update the description to reflect change.
+
+MODE 2 BEHAVIOR: [MODE 2 ONLY]
+  Detect all multi-dimensional elements during discovery.
+  Present both approaches to reviewer for each detected case.
+  Do not choose approach without human confirmation.
+
+--------------------------------------------------
+PLACEHOLDER DETECTION RULES
+--------------------------------------------------
+
+APPLIES TO: Document parsing before comparison or discovery.
+
+Reports may contain redacted or placeholder values using
+these patterns: ## or ### or ####
+
+RULE: Do not treat placeholder values as meaningful data.
+RULE: A change from ### to ## is NOT a detected change.
+RULE: Normalize all placeholder patterns to [REDACTED]
+before performing any semantic comparison.
+RULE: If a field contains only placeholder values its
+content should be considered unknown — not changed.
+
+--------------------------------------------------
+FILE NAMING CONVENTION
+--------------------------------------------------
+
+Applied to output UCDD file — not a column rule.
+
+FINAL APPROVED FORMAT:
+  [Use Case ID]_UCDD_[YYYYMM]
+  Example: "APM0004862_UCDD_202504"
+
+WORK IN PROGRESS FORMAT:
+  [Use Case ID]_UCDD_WIP
+  Example: "APM0004862_UCDD_WIP"
+
+RULES:
+  - Use WIP suffix during processing before human approval
+  - Switch to YYYYMM format on final reviewer approval
+  - Use Case ID must match Use Case Identifier from ADMF
+  - QA will enforce this naming convention during review
+  - Initial submissions ending in WIP are accepted by QA
+  - Final submissions must use YYYYMM format
+
+--------------------------------------------------
+DQ DIMENSIONS ENTERPRISE ECOSYSTEM CONTEXT
+--------------------------------------------------
+
+Background context for AI — not a column rule.
+AI must be aware that UCDD feeds into a larger chain.
+
+ECOSYSTEM FLOW:
+  UCDD → Enterprise Data Checks Catalog (EDCC)
+       → Fit for Purpose (FFP) Business Metadata
+
+KEY ROLES IN THE CHAIN:
+  Use Case Owner (UCO):
+    Captures DQ dimension expectations in UCDD template.
+    UCDD undergoes QA review. UCO approves UCDD.
+
+  Application Business Owner (ABO):
+    Documents DQ checks in EDCC identifying Primary
+    (required) and Secondary (optional) DQ Check Dimensions.
+    EDCC performs upload checks via ADMF.
+    ABO approves EDCC in ADMF.
+
+  Enterprise Data Quality Defect Management (EDQDM):
+    Captures new DQ dimension fields for defects across chain.
+
+IMPLICATION FOR AI OUTPUT:
+  DQ check numbers recommended must be compatible with
+  EDCC registration downstream.
+  Select ONLY from the governed numbered list 1 through 12.
+  N/A justifications must be defensible at EDCC review level
+  — not just at UCDD level.
+
+--------------------------------------------------
+EARLY EXIT RULE
+--------------------------------------------------
+
+APPLIES TO: Mode 1 only — Change Detection Mode.
+
+After document processing and before Stage 3 disposition:
+
+IF: No meaningful differences are detected above the
+    minimum semantic similarity threshold between the
+    new report and the prior approved report
+
+THEN:
+  - Skip all downstream AI processing
+  - Return a No Change summary for all UCDEs
+  - Carry forward all existing UCDD values unchanged
+  - Flag output as: "No material changes detected —
+    all UCDEs confirmed No Change"
+  - Still generate the Change Matrix with No Change
+    disposition for every UCDE for audit purposes
+
+WHY: Saves API cost, reduces latency, prevents
+unnecessary processing when report is effectively
+unchanged between versions.
+
+================================================
+END OF guideline_rules.txt
+================================================

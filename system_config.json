@@ -1,0 +1,17 @@
+{
+  "default_processing_mode": "Mode 1",
+  "mode_2_enabled": false,
+  "batch_size": 50,
+  "confidence_threshold": 55,
+  "early_exit_enabled": false,
+  "early_exit_similarity_threshold": 0.95,
+  "max_file_size_mb": 50,
+  "accepted_report_formats": [".pdf", ".docx", ".doc", ".txt"],
+  "accepted_ucdd_formats": [".xlsx", ".xls", ".csv"],
+  "api_model": "claude-sonnet-4-20250514",
+  "api_max_tokens": 1000,
+  "review_required_threshold": 3,
+  "output_naming_suffix": "WIP",
+  "session_id_format": "[UseCase_ID]_[YYYYMMDD]_[HHMMSS]",
+  "max_sessions_retained": 10
+}

@@ -1,0 +1,33 @@
+{
+  "Mode 1": {
+    "step_1_system_context": "SECTION 0",
+    "step_2_metadata": "SECTION 4",
+    "step_3_change_detection": "SECTION 2",
+    "step_4_impact_mapping": "SECTION 3",
+    "step_5a_column_1": "SECTION 5",
+    "step_5b_column_2": "SECTION 6",
+    "step_5c_columns_3_4": "SECTION 7",
+    "step_5d_column_5": "SECTION 8",
+    "step_5e_columns_6_7_8": "SECTION 9",
+    "step_5f_columns_9_10": "SECTION 10",
+    "step_5g_columns_11_12": "SECTION 11",
+    "step_5h_row_assembly": "SECTION 12",
+    "step_6_matrix_assembly": "SECTION 13",
+    "multi_dimensional": "SECTION 14"
+  },
+  "Mode 2": {
+    "step_1_system_context": "SECTION 0",
+    "step_2_metadata": "SECTION 4",
+    "step_3_discovery": "SECTION 1",
+    "step_4a_column_1": "SECTION 5",
+    "step_4b_column_2": "SECTION 6",
+    "step_4c_columns_3_4": "SECTION 7",
+    "step_4d_column_5": "SECTION 8",
+    "step_4e_columns_6_7_8": "SECTION 9",
+    "step_4f_columns_9_10": "SECTION 10",
+    "step_4g_columns_11_12": "SECTION 11",
+    "step_4h_row_assembly": "SECTION 12",
+    "step_5_matrix_assembly": "SECTION 13",
+    "multi_dimensional": "SECTION 14"
+  }
+}

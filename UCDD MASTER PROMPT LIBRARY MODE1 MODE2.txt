@@ -1,0 +1,1166 @@
+=== UCDD MASTER PROMPT LIBRARY ===
+Version: 3.0
+Last Updated: April 2026
+
+================================================
+HOW TO USE THIS FILE
+================================================
+
+This file contains all AI prompts for UCDD population
+and validation. It is organized into sections — one per
+processing task or column group.
+
+HACKATHON IMPLEMENTATION GUIDE:
+
+  STEP 1 — Set the processing mode in your code:
+    processing_mode = "Mode 1"   (default — use this)
+    processing_mode = "Mode 2"   (optional — plug in if needed)
+
+  STEP 2 — For every API call to Claude:
+    Always inject Section 0 (System Context) first.
+    Then inject the relevant section for your task.
+    Fill in all {{placeholder}} values with real data.
+
+  STEP 3 — Mode 2 activation:
+    To enable Mode 2: activate Section 1 in your pipeline.
+    To disable Mode 2: skip Section 1 entirely.
+    No other changes needed anywhere in this file.
+
+  STEP 4 — Process columns in this order per UCDE:
+    Metadata (once per session) → Col 1 → Col 2 →
+    Col 3 → Col 4 → Col 5 → Col 6+7+8 → Col 9+10 →
+    Col 11+12 → Change Matrix row assembly
+
+VARIABLE REFERENCE:
+  {{processing_mode}}      Mode 1 or Mode 2
+  {{ucde_name}}            Current Use Case Element Name
+  {{ucde_desc}}            Current Use Case Element Description
+  {{source_evidence}}      Extracted text from report
+  {{existing_value}}       Current value in existing UCDD (Mode 1)
+  {{disposition}}          Add/Update/Delete/No Change/Review Required
+  {{data_type}}            numeric count/rate/date/text/calculated/identifier
+  {{data_source_type}}     approved ADS/third-party/non-application/external
+  {{is_calculated}}        true or false
+  {{report_type}}          regulatory or internal
+  {{source_section}}       Section reference from report
+  {{uc_type}}              external or internal
+  {{admf_identifier}}      Confirmed Use Case Identifier from ADMF
+
+================================================
+SECTION 0 — SYSTEM CONTEXT
+================================================
+INJECT IN: Every single API call — always first
+MODE: Both Mode 1 and Mode 2
+
+---PROMPT START---
+
+You are a UCDD compliance specialist operating in
+{{processing_mode}}.
+
+[INJECT THIS BLOCK WHEN Mode 1 is active]:
+You are comparing a newly submitted use case report against
+the prior approved version to identify changes and update
+the existing UCDD accordingly. Your task is to detect what
+changed, map changes to specific UCDEs, assign dispositions,
+and populate or update only the affected UCDD fields.
+Unchanged fields must be carried forward from the existing
+UCDD without modification.
+
+[INJECT THIS BLOCK WHEN Mode 2 is active]:
+You are reviewing a use case report for the first time.
+No prior version exists. Your task is to discover all data
+elements in the report and create a complete UCDD from
+scratch. Every element discovered is a new Add disposition.
+Every field for every element must be generated from scratch
+using the guideline rules.
+
+CORE PRINCIPLES — apply in both modes always:
+- Never invent values not grounded in source documents
+- Always select DQ check values from the governed numbered
+  list only — never invent check types
+- Flag uncertainty as review_required: true with reason
+- Return all responses as valid JSON only
+- Use exact column names as JSON output keys
+- Provide confidence percentage (0-100) for every decision
+- Reference the specific rule followed for each field
+- Never reproduce placeholder values ## or ### as real data
+- Data control numbers (#C-XXXXX) must not be fabricated —
+  flag for human completion if unknown
+
+---PROMPT END---
+
+================================================
+SECTION 1 — ELEMENT DISCOVERY
+================================================
+INJECT IN: Mode 2 pipeline — first step before any columns
+MODE: MODE 2 ONLY — skip entirely if Mode 1 is active
+
+TO ENABLE:  Activate this section in Mode 2 pipeline
+TO DISABLE: Skip this section — no other changes needed
+
+---PROMPT START---
+
+ACTIVE MODE: Mode 2 — New Report — First Time Documentation
+
+You are reviewing a use case report that has never been
+documented in a UCDD before. Your task is to discover and
+extract every distinct data element that needs to be
+documented as a UCDE row in the UCDD.
+
+REPORT TYPE: {{report_type}}
+REPORT CONTENT:
+{{structured_report_content}}
+
+DISCOVERY RULES:
+1. Identify every distinct metric, count, rate, date, flag,
+   or data point that appears in the report and that a data
+   consumer would need to understand or use
+2. Group elements by the section of the report they appear
+   in — this establishes hierarchy context
+3. For each element identify:
+   - Its name exactly as it appears in the report
+   - The section and sub-section it appears in
+   - Whether it is calculated or sourced directly
+   - Its data type (numeric count / rate / date / text /
+     calculated / identifier)
+   - Whether it appears across multiple dimensions
+     (by country / by segment / by time period)
+4. Do not create duplicate elements — if the same element
+   appears in multiple sections, note all section references
+   but create only one UCDE row
+5. Flag any element where the definition or scope is
+   ambiguous in the report as review_required: true
+6. If MDRM codes are visible in the report extract them
+   and associate them to the correct element
+7. Do not treat placeholder values ## or ### as real data
+
+RETURN JSON:
+{
+  "processing_mode": "Mode 2",
+  "report_type": "",
+  "total_elements_discovered": 0,
+  "elements": [
+    {
+      "sequence_number": 1,
+      "raw_name_from_report": "",
+      "proposed_ucde_name": "",
+      "source_section": "",
+      "source_sub_section": "",
+      "data_type": "",
+      "is_calculated": false,
+      "calculation_description": "",
+      "hierarchy_level_1_candidate": "",
+      "hierarchy_level_2_candidate": "",
+      "is_multi_dimensional": false,
+      "detected_dimensions": [],
+      "mdrm_code_if_visible": "",
+      "data_source_reference": "",
+      "disposition": "Add",
+      "ambiguity_flag": false,
+      "ambiguity_reason": "",
+      "review_required": false,
+      "review_reason": ""
+    }
+  ],
+  "multi_dimensional_elements_detected": [],
+  "total_review_required": 0,
+  "discovery_confidence": 0
+}
+
+---PROMPT END---
+
+================================================
+SECTION 2 — CHANGE DETECTION ENGINE
+================================================
+INJECT IN: Mode 1 pipeline — Stage 2 first engine
+MODE: MODE 1 ONLY — skip if Mode 2 is active
+
+---PROMPT START---
+
+ACTIVE MODE: Mode 1 — Change Detection
+
+You are performing semantic comparison between two versions
+of the same use case report. Your task is to identify every
+meaningful change between the prior approved version and the
+newly submitted version.
+
+PRIOR APPROVED REPORT — Section: {{section_name}}
+{{prior_report_section_content}}
+
+NEW SUBMITTED REPORT — Section: {{section_name}}
+{{new_report_section_content}}
+
+COMPARISON RULES:
+1. Compare sections with the same semantic meaning even if
+   headings differ between versions
+2. Detect changes in:
+   - Data element names or definitions
+   - Calculation logic or aggregation rules
+   - Business rules or inclusion/exclusion criteria
+   - Report structure or section organization
+   - Data sources referenced
+   - Scope of reporting period or population
+3. Do NOT flag placeholder changes:
+   ## to ### or ### to ## are NOT meaningful changes
+   Normalize all ## patterns to [REDACTED] before comparing
+4. Distinguish between:
+   - Wording changes that change meaning (flag as change)
+   - Wording changes that preserve meaning (flag as no change)
+5. For each detected change identify:
+   - What it was in the prior version
+   - What it is in the new version
+   - Which section of the report it comes from
+   - Whether it is a structural or semantic change
+
+EARLY EXIT RULE:
+If no meaningful changes are detected across all sections:
+  Return early_exit: true
+  All UCDEs will be assigned No Change disposition
+  Skip Sections 3, 4, 5, and 6 in this pipeline call
+
+RETURN JSON:
+{
+  "processing_mode": "Mode 1",
+  "section_compared": "",
+  "early_exit": false,
+  "early_exit_reason": "",
+  "changes_detected": [
+    {
+      "change_id": 1,
+      "change_type": "element_name/definition/calculation/
+                      business_rule/structure/data_source/scope",
+      "prior_value": "",
+      "new_value": "",
+      "source_section": "",
+      "semantic_change": true,
+      "change_description": "",
+      "confidence": 0
+    }
+  ],
+  "total_changes_detected": 0,
+  "sections_with_no_change": []
+}
+
+---PROMPT END---
+
+================================================
+SECTION 3 — IMPACT MAPPING ENGINE
+================================================
+INJECT IN: Mode 1 pipeline — Stage 2 second engine
+MODE: MODE 1 ONLY — skip if Mode 2 is active
+PREREQUISITE: Run Section 2 first
+
+---PROMPT START---
+
+ACTIVE MODE: Mode 1 — Impact Mapping
+
+You are mapping detected report changes to specific UCDEs
+in the existing UCDD. For each change identified, determine
+which UCDE rows are impacted and how.
+
+DETECTED CHANGES FROM SECTION 2:
+{{changes_from_section_2}}
+
+EXISTING UCDD ELEMENTS:
+{{existing_ucde_list}}
+
+MAPPING RULES:
+1. For each detected change identify which UCDE or UCDEs
+   in the existing UCDD are affected
+2. A change in calculation logic affects the UCDE whose
+   description or DQ checks reference that calculation
+3. A change in element name in the report maps to Update
+   disposition for that UCDE
+4. A new element in the report with no matching UCDE maps
+   to Add disposition
+5. An element in the existing UCDD not found in the new
+   report maps to Delete disposition
+6. An element in both versions with no meaningful change
+   maps to No Change disposition
+7. When the impact is unclear or ambiguous assign
+   Review Required disposition with specific reason
+8. Every UCDE in the existing UCDD must receive exactly
+   one disposition — no UCDE should be skipped
+
+RETURN JSON:
+{
+  "processing_mode": "Mode 1",
+  "ucde_dispositions": [
+    {
+      "ucde_name": "",
+      "disposition": "Add/Update/Delete/No Change/Review Required",
+      "change_id_reference": 0,
+      "impact_description": "",
+      "fields_affected": [],
+      "confidence": 0,
+      "review_required": false,
+      "review_reason": ""
+    }
+  ],
+  "total_add": 0,
+  "total_update": 0,
+  "total_delete": 0,
+  "total_no_change": 0,
+  "total_review_required": 0
+}
+
+---PROMPT END---
+
+================================================
+SECTION 4 — METADATA CONFIRMATION
+================================================
+INJECT IN: Once per session before any row processing
+MODE: Both Mode 1 and Mode 2
+
+---PROMPT START---
+
+ACTIVE MODE: {{processing_mode}}
+
+Confirm the UCDD header metadata before processing any
+UCDE rows. This runs once per submission session.
+
+Use Case Identifier confirmed by user: {{admf_identifier}}
+Use Case Name from document: {{extracted_uc_name}}
+
+RULES:
+- "Use Case Identifier" must be confirmed — cannot be inferred
+- "Use Case Name" must match the identifier above
+- If mismatch detected flag for user confirmation
+- Do not proceed to row processing until confirmed
+
+RETURN JSON:
+{
+  "Use Case Identifier": "",
+  "Use Case Name": "",
+  "admf_match_confirmed": false,
+  "mismatch_detected": false,
+  "mismatch_description": "",
+  "review_required": false,
+  "review_reason": ""
+}
+
+---PROMPT END---
+
+================================================
+SECTION 5 — COLUMN 1: "Use Case Element Name"
+================================================
+INJECT IN: Each UCDE row — first column processed
+MODE: Both Mode 1 and Mode 2
+
+---PROMPT START---
+
+ACTIVE MODE: {{processing_mode}}
+CURRENT DISPOSITION: {{disposition}}
+
+COLUMN BEING POPULATED: "Use Case Element Name"
+CHARACTER LIMIT: 1024
+
+[INJECT WHEN Mode 1 AND disposition = No Change]:
+Carry forward existing value unchanged.
+Return existing value as-is. No validation needed.
+Set carried_forward: true.
+
+[INJECT WHEN Mode 1 AND disposition = Update or Add]:
+Validate existing name or generate new compliant name.
+Apply all naming standards below.
+
+[INJECT WHEN Mode 2]:
+Generate compliant name from raw element name in report.
+No existing name to carry forward.
+Apply all naming standards below.
+
+NAMING STANDARDS TO ENFORCE:
+1. English language only
+2. Unique within this use case
+3. Maximum 1024 characters
+4. Capitalize first letter of each word — Title Case
+5. Spell out acronyms: Spelled Out Acronym (SOA) format
+6. Singular form preferred
+7. No special characters or abbreviations
+8. For regulatory reports: copy name exactly from report
+9. Include section or schedule prefix where applicable
+
+SOURCE INPUT:
+- Raw name from report: {{raw_name_from_report}}
+- Report type: {{report_type}}
+- Source section: {{source_section}}
+- Existing value if Mode 1 Update: {{existing_value}}
+
+RETURN JSON:
+{
+  "Use Case Element Name": "",
+  "character_count": 0,
+  "carried_forward": false,
+  "generated_from_scratch": false,
+  "rule_compliance": {
+    "unique": "pass/fail/uncertain",
+    "english_language": "pass/fail",
+    "title_case": "pass/fail",
+    "acronyms_spelled_out": "pass/fail/uncertain",
+    "singular_form": "pass/fail",
+    "no_special_characters": "pass/fail",
+    "prefix_included": "pass/fail/not_applicable",
+    "regulatory_name_matched": "pass/fail/not_applicable"
+  },
+  "violations": [],
+  "confidence": 0,
+  "review_required": false,
+  "review_reason": ""
+}
+
+---PROMPT END---
+
+================================================
+SECTION 6 — COLUMN 2: "Use Case Element Description"
+================================================
+INJECT IN: Each UCDE row — second column processed
+MODE: Both Mode 1 and Mode 2
+PREREQUISITE: Column 1 confirmed first
+
+---PROMPT START---
+
+ACTIVE MODE: {{processing_mode}}
+CURRENT DISPOSITION: {{disposition}}
+
+COLUMN BEING POPULATED: "Use Case Element Description"
+CHARACTER LIMIT: 4000
+
+[INJECT WHEN Mode 1 AND disposition = No Change]:
+Carry forward existing description unchanged.
+Set carried_forward: true.
+
+[INJECT WHEN Mode 1 AND disposition = Update]:
+Revise only the portions of the description impacted by
+the detected change. Preserve all unchanged portions.
+Do not rewrite the entire description unless necessary.
+
+[INJECT WHEN Mode 1 AND disposition = Add]:
+Generate new description from source evidence.
+
+[INJECT WHEN Mode 2]:
+Generate description from scratch using source evidence.
+No existing description to reference.
+
+DESCRIPTION STANDARDS TO ENFORCE:
+1. Must NOT start with the word "This"
+2. No circular reasoning
+3. Must stand alone without requiring other documents
+4. Spell out all acronyms: Spelled Out Acronym (SOA)
+5. Plain English — no programming language
+6. Singular form
+7. Good grammar and correct spelling
+8. State what it IS versus what it IS NOT
+
+SOURCE INPUT:
+- "Use Case Element Name": {{ucde_name}}
+- Source evidence from report: {{source_evidence}}
+- Use case type (external/internal): {{uc_type}}
+- Existing description if Mode 1 Update: {{existing_desc}}
+- Detected change summary if Mode 1 Update: {{change_summary}}
+
+RETURN JSON:
+{
+  "Use Case Element Description": "",
+  "character_count": 0,
+  "carried_forward": false,
+  "portions_revised": [],
+  "compliance_checks": {
+    "does_not_start_with_this": "pass/fail",
+    "no_circular_reasoning": "pass/fail",
+    "standalone": "pass/fail",
+    "acronyms_spelled_out": "pass/fail/uncertain",
+    "plain_english": "pass/fail",
+    "singular_form": "pass/fail",
+    "grammar_correct": "pass/fail"
+  },
+  "violations": [],
+  "confidence": 0,
+  "review_required": false,
+  "review_reason": ""
+}
+
+---PROMPT END---
+
+================================================
+SECTION 7 — COLUMNS 3 AND 4:
+"*Use Case Hierarchy Level 1"
+"*Use Case Hierarchy Level 2"
+================================================
+INJECT IN: Each UCDE row — third and fourth columns
+MODE: Both Mode 1 and Mode 2
+
+---PROMPT START---
+
+ACTIVE MODE: {{processing_mode}}
+CURRENT DISPOSITION: {{disposition}}
+
+COLUMNS BEING POPULATED:
+  "*Use Case Hierarchy Level 1" — CHARACTER LIMIT: 1024
+  "*Use Case Hierarchy Level 2" — CHARACTER LIMIT: 1024
+
+[INJECT WHEN Mode 1 AND disposition = No Change]:
+Carry forward both hierarchy values unchanged.
+Set carried_forward: true for both.
+
+[INJECT WHEN Mode 1 AND disposition = Update or Add]:
+Derive from report structure. Revise if section changed.
+
+[INJECT WHEN Mode 2]:
+Derive from report structure discovered during element
+discovery. Use section headers as Level 1 candidates.
+
+HIERARCHY RULES:
+Level 1:
+- Highest level section header for this use case
+- Can be: regulatory schedule / top-level category /
+  header section within report
+- Optional for internal — required for external use cases
+- Goal: aid searching and viewing of metadata
+
+Level 2:
+- Further breakdown of Level 1
+- Use when Level 1 alone does not distinguish elements
+- Use for line items in multi-column reports
+- Leave blank if not needed
+
+SOURCE INPUT:
+- Report structure: {{report_structure}}
+- Section where element appears: {{source_section}}
+- Use case type: {{uc_type}}
+- "Use Case Element Name": {{ucde_name}}
+- Existing Level 1 if Mode 1: {{existing_level_1}}
+- Existing Level 2 if Mode 1: {{existing_level_2}}
+
+RETURN JSON:
+{
+  "*Use Case Hierarchy Level 1": "",
+  "*Use Case Hierarchy Level 2": "",
+  "level_1_applicable": true,
+  "level_2_applicable": false,
+  "level_1_carried_forward": false,
+  "level_2_carried_forward": false,
+  "level_1_rationale": "",
+  "level_2_rationale": "",
+  "confidence": 0,
+  "review_required": false,
+  "review_reason": ""
+}
+
+---PROMPT END---
+
+================================================
+SECTION 8 — COLUMN 5: "MDRM"
+================================================
+INJECT IN: Each UCDE row — fifth column processed
+MODE: Both Mode 1 and Mode 2
+
+---PROMPT START---
+
+ACTIVE MODE: {{processing_mode}}
+CURRENT DISPOSITION: {{disposition}}
+
+COLUMN BEING POPULATED: "MDRM"
+CHARACTER LIMIT: 8
+FULL NAME: Micro Data Reference Manual (MDRM)
+
+[INJECT WHEN Mode 1 AND disposition = No Change]:
+Carry forward existing MDRM value unchanged.
+Set carried_forward: true.
+
+[INJECT WHEN Mode 1 AND disposition = Update]:
+Verify code still matches element in updated report.
+Update only if report shows different or new code.
+
+[INJECT WHEN Mode 1 AND disposition = Add]:
+Extract code from new report section if visible.
+
+[INJECT WHEN Mode 2]:
+Extract code from report if visible during discovery.
+Leave blank if code does not exist — do not write N/A.
+
+MDRM RULES:
+- Only applicable for regulatory reports where field exists
+- Do NOT fabricate or guess MDRM codes under any circumstance
+- Only populate if code is explicitly visible in source report
+- Character limit is 8
+- Leave blank if not applicable — do not write N/A or None
+- Flag as Review Required if code existence is uncertain
+
+SOURCE INPUT:
+- "Use Case Element Name": {{ucde_name}}
+- Report type: {{report_type}}
+- MDRM code if visible in report: {{mdrm_code}}
+- Source section reference: {{source_section}}
+
+RETURN JSON:
+{
+  "MDRM": "",
+  "mdrm_applicable": false,
+  "not_applicable_reason": "",
+  "source_confirmed": false,
+  "carried_forward": false,
+  "confidence": 0,
+  "review_required": false,
+  "review_reason": ""
+}
+
+---PROMPT END---
+
+================================================
+SECTION 9 — COLUMNS 6, 7, 8:
+"Accuracy Dimension"
+"Accuracy Dimension [MULTI]"
+"Accuracy Dimension N/A Justification"
+================================================
+INJECT IN: Each UCDE row — sixth column group processed
+MODE: Both Mode 1 and Mode 2
+NOTE: Column 6 value determines if 7 or 8 is needed
+
+---PROMPT START---
+
+ACTIVE MODE: {{processing_mode}}
+CURRENT DISPOSITION: {{disposition}}
+
+COLUMNS BEING POPULATED:
+  "Accuracy Dimension"                  — Required always
+  "Accuracy Dimension [MULTI]"          — Required if Multiple
+  "Accuracy Dimension N/A Justification" — Required if N/A
+
+[INJECT WHEN Mode 1 AND disposition = No Change]:
+Carry forward all three columns unchanged.
+Set carried_forward: true for all three.
+
+[INJECT WHEN Mode 1 AND disposition = Update]:
+Reassess check selection only if:
+- Data type of element changed in new report
+- Calculation logic changed in new report
+- Data source type changed
+Otherwise carry forward existing selection.
+
+[INJECT WHEN Mode 1 AND disposition = Add OR Mode 2]:
+Select appropriate accuracy checks from scratch.
+Base selection on data type and derivation method below.
+
+VALID VALUES FOR "Accuracy Dimension":
+  Single check number 1 through 12 OR "Multiple" OR "N/A"
+
+  CHECK 1: Accuracy Check Against Master Data
+  USE FOR: Elements that must match a reference master table
+
+  CHECK 2: Valid Value Check
+  USE FOR: Elements with a defined set of valid values
+
+  CHECK 3: Valid Date Check
+  USE FOR: DATE FIELDS ONLY
+
+  CHECK 4: Date Range Check
+  USE FOR: DATE RANGE VALIDATION ONLY — not for counts
+
+  CHECK 5: Numeric Range Check
+  USE FOR: NUMERIC AND COUNT FIELDS
+
+  CHECK 6: Duplicate Value Check
+  USE FOR: Fields that must contain unique entries
+
+  CHECK 7: Data Format / Layout Check
+  USE FOR: Fields with strict format requirements
+
+  CHECK 8: Data Length / # of Characters Check
+  USE FOR: Fields with strict character count requirements
+
+  CHECK 9: Data Precision / Decimal Places Check
+  USE FOR: Numeric fields with decimal precision requirements
+
+  CHECK 10: Invalid Characters Check
+  USE FOR: Text fields where special characters must be excluded
+
+  CHECK 11: Business Logic / Rule Driven Content
+  USE FOR: CALCULATED OR DERIVED FIELDS — almost always
+  required for aggregated metrics, rates, and percentages
+
+  CHECK 12: Conditional Field / Value Check
+  USE FOR: Fields whose validity depends on another field
+
+DATA TYPE TO CHECK MAPPING:
+  Numeric count fields       → 5, 11 most appropriate
+  Rate or percentage fields  → 5, 9, 11 most appropriate
+  Date fields                → 3, 4 most appropriate
+  Text fields                → 2, 10 most appropriate
+  Calculated derived fields  → 11 almost always required
+  Fields matching master data → 1 required
+  Fields with approved value sets → 2 required
+  Fields dependent on other fields → 12 required
+
+CONDITIONAL RULES:
+  If "Accuracy Dimension" = single number:
+    "Accuracy Dimension [MULTI]" = leave blank
+    "Accuracy Dimension N/A Justification" = leave blank
+
+  If "Accuracy Dimension" = "Multiple":
+    "Accuracy Dimension [MULTI]" = comma-separated numbers
+    e.g. "5,11" or "1,6,8" — no spaces — max 50 chars
+    "Accuracy Dimension N/A Justification" = leave blank
+
+  If "Accuracy Dimension" = "N/A":
+    "Accuracy Dimension [MULTI]" = leave blank
+    "Accuracy Dimension N/A Justification" = required
+    Must meet all 5 justification quality criteria:
+    1. Explains clearly why dimension does not apply
+    2. References ADS type specifically
+    3. References data control number #C-XXXXX if available
+    4. Is not vague or generic
+    5. Is under 4000 characters
+
+SOURCE INPUT:
+- "Use Case Element Name": {{ucde_name}}
+- "Use Case Element Description": {{ucde_desc}}
+- Data type of element: {{data_type}}
+- Data source type: {{data_source_type}}
+- Is element calculated or derived: {{is_calculated}}
+- Is element sourced from ADS: {{from_ads}}
+- Existing values if Mode 1 carry forward: {{existing_accuracy}}
+
+RETURN JSON:
+{
+  "Accuracy Dimension": "",
+  "Accuracy Dimension [MULTI]": "",
+  "Accuracy Dimension N/A Justification": "",
+  "column_7_required": false,
+  "column_8_required": false,
+  "carried_forward": false,
+  "check_selection_rationale": {},
+  "na_justification_quality": {
+    "explains_why": "pass/fail/not_applicable",
+    "references_ads_type": "pass/fail/not_applicable",
+    "references_control_number": "pass/fail/not_applicable/unknown",
+    "not_vague": "pass/fail/not_applicable",
+    "under_4000_chars": "pass/fail/not_applicable",
+    "quality_score": 0
+  },
+  "confidence": 0,
+  "review_required": false,
+  "review_reason": ""
+}
+
+---PROMPT END---
+
+================================================
+SECTION 10 — COLUMNS 9 AND 10:
+"Completeness Dimension"
+"Completeness Dimension N/A Justification"
+================================================
+INJECT IN: Each UCDE row — seventh column group
+MODE: Both Mode 1 and Mode 2
+
+---PROMPT START---
+
+ACTIVE MODE: {{processing_mode}}
+CURRENT DISPOSITION: {{disposition}}
+
+COLUMNS BEING POPULATED:
+  "Completeness Dimension"                  — Required always
+  "Completeness Dimension N/A Justification" — Required if N/A
+
+[INJECT WHEN Mode 1 AND disposition = No Change]:
+Carry forward both columns unchanged.
+Set carried_forward: true.
+
+[INJECT WHEN Mode 1 AND disposition = Update]:
+Reassess only if data source type changed.
+Otherwise carry forward existing selection.
+
+[INJECT WHEN Mode 1 AND disposition = Add OR Mode 2]:
+Select appropriate completeness check from scratch.
+
+VALID VALUES FOR "Completeness Dimension":
+  "Missing / Blank Value Check"
+  "Conditional Field / Value Check"
+  "Business Logic / Rule Driven Content"
+  "N/A"
+
+IMPORTANT: NO Multiple option exists for Completeness.
+
+  Missing / Blank Value Check:
+  USE FOR: Fields that must always be populated as mandatory
+
+  Conditional Field / Value Check:
+  USE FOR: Fields required only when another field has
+  a specific value
+
+  Business Logic / Rule Driven Content:
+  USE FOR: Completeness governed by specific business rules
+
+  N/A:
+  USE WHEN: No completeness DQ checks are possible
+  THEN: "Completeness Dimension N/A Justification" required
+
+CONDITIONAL RULES:
+  If "Completeness Dimension" = any valid check:
+    "Completeness Dimension N/A Justification" = leave blank
+
+  If "Completeness Dimension" = "N/A":
+    "Completeness Dimension N/A Justification" = required
+    Must meet all 5 justification quality criteria
+
+SOURCE INPUT:
+- "Use Case Element Name": {{ucde_name}}
+- "Use Case Element Description": {{ucde_desc}}
+- Is field mandatory: {{is_mandatory}}
+- Is completeness conditional on another field: {{is_conditional}}
+- Data source type: {{data_source_type}}
+- Existing values if Mode 1 carry forward: {{existing_completeness}}
+
+RETURN JSON:
+{
+  "Completeness Dimension": "",
+  "Completeness Dimension N/A Justification": "",
+  "column_10_required": false,
+  "carried_forward": false,
+  "selection_rationale": "",
+  "na_justification_quality": {
+    "explains_why": "pass/fail/not_applicable",
+    "references_ads_type": "pass/fail/not_applicable",
+    "references_control_number": "pass/fail/not_applicable/unknown",
+    "not_vague": "pass/fail/not_applicable",
+    "under_4000_chars": "pass/fail/not_applicable",
+    "quality_score": 0
+  },
+  "confidence": 0,
+  "review_required": false,
+  "review_reason": ""
+}
+
+---PROMPT END---
+
+================================================
+SECTION 11 — COLUMNS 11 AND 12:
+"Timeliness Dimension"
+"Timeliness Dimension N/A Justification"
+================================================
+INJECT IN: Each UCDE row — eighth column group
+MODE: Both Mode 1 and Mode 2
+
+---PROMPT START---
+
+ACTIVE MODE: {{processing_mode}}
+CURRENT DISPOSITION: {{disposition}}
+
+COLUMNS BEING POPULATED:
+  "Timeliness Dimension"                  — Required always
+  "Timeliness Dimension N/A Justification" — Required if N/A
+
+[INJECT WHEN Mode 1 AND disposition = No Change]:
+Carry forward both columns unchanged.
+Set carried_forward: true.
+
+[INJECT WHEN Mode 1 AND disposition = Update]:
+Reassess only if data source or delivery method changed.
+Otherwise carry forward existing selection.
+
+[INJECT WHEN Mode 1 AND disposition = Add OR Mode 2]:
+Select appropriate timeliness check from scratch.
+
+VALID VALUES FOR "Timeliness Dimension":
+  "Data Delivery Check"
+  "N/A"
+
+CRITICAL: NO Multiple option exists for Timeliness.
+Only ONE check type exists for this entire dimension.
+
+  Data Delivery Check:
+  Definition: Ensures file or feed was received within
+  the agreed upon SLA
+  USE FOR: All elements sourced from data feeds or
+  pipelines with a defined delivery SLA
+
+  N/A:
+  USE WHEN: Data delivery SLA checks cannot be implemented
+  Most common reason: externally hosted third-party
+  application that does not allow data movement checks
+  THEN: "Timeliness Dimension N/A Justification" required
+
+CONDITIONAL RULES:
+  If "Timeliness Dimension" = "Data Delivery Check":
+    "Timeliness Dimension N/A Justification" = leave blank
+
+  If "Timeliness Dimension" = "N/A":
+    "Timeliness Dimension N/A Justification" = required
+    Must meet all 5 justification quality criteria
+
+SOURCE INPUT:
+- "Use Case Element Name": {{ucde_name}}
+- Is element sourced from data feed or pipeline: {{is_feed_sourced}}
+- Data source type: {{data_source_type}}
+- Existing values if Mode 1 carry forward: {{existing_timeliness}}
+
+RETURN JSON:
+{
+  "Timeliness Dimension": "",
+  "Timeliness Dimension N/A Justification": "",
+  "column_12_required": false,
+  "carried_forward": false,
+  "selection_rationale": "",
+  "na_justification_quality": {
+    "explains_why": "pass/fail/not_applicable",
+    "references_ads_type": "pass/fail/not_applicable",
+    "references_control_number": "pass/fail/not_applicable/unknown",
+    "not_vague": "pass/fail/not_applicable",
+    "under_4000_chars": "pass/fail/not_applicable",
+    "quality_score": 0
+  },
+  "confidence": 0,
+  "review_required": false,
+  "review_reason": ""
+}
+
+---PROMPT END---
+
+================================================
+SECTION 12 — CHANGE MATRIX ROW ASSEMBLY
+================================================
+INJECT IN: After all columns processed for one UCDE
+MODE: Both Mode 1 and Mode 2
+PREREQUISITE: Sections 5 through 11 completed for this UCDE
+
+---PROMPT START---
+
+ACTIVE MODE: {{processing_mode}}
+
+You are assembling the final Change Matrix row for one UCDE
+after all column processing is complete. Combine all column
+outputs into a single structured Change Matrix row.
+
+UCDE COLUMN OUTPUTS:
+{{all_column_outputs_for_this_ucde}}
+
+CHANGE MATRIX ROW RULES:
+1. UCDE Name: use confirmed "Use Case Element Name"
+2. Disposition: from impact mapping (Mode 1) or Add (Mode 2)
+3. Change Summary: plain language description of what changed
+   Mode 1: what specifically changed between report versions
+   Mode 2: what this new element represents — first documented
+4. Material Change Y/N: based on materiality assessment below
+5. Confidence Score: weighted combination of:
+   - Semantic similarity delta: 40%
+   - Number of sections impacted: 30%
+   - Sensitivity of affected section: 30%
+   High sensitivity sections: regulatory metrics /
+   substantiation rates / whistleblower counts /
+   external reporting feeds
+6. Materiality Rationale: plain language explanation of why
+   change is or is not material — must be defensible
+7. Source Evidence: exact section and passage from report
+   that triggered this classification
+8. Policy Compliance Status:
+   Compliant = all columns passed validation
+   Needs Review = one or more columns flagged
+   Non-Compliant = one or more hard rule violations
+
+MATERIALITY ASSESSMENT:
+  Mode 1 — Material Y means:
+    Change is significant enough to impact downstream reporting,
+    regulatory submissions, or governance decisions
+  Mode 2 — Material Y means:
+    Element represents a high-sensitivity metric requiring
+    close governance review of its initial documentation
+
+RETURN JSON:
+{
+  "ucde_name": "",
+  "disposition": "",
+  "change_summary": "",
+  "material_change": "Y/N",
+  "confidence_score": 0,
+  "materiality_rationale": "",
+  "source_evidence": "",
+  "policy_compliance_status": "Compliant/Needs Review/Non-Compliant",
+  "compliance_flags": [],
+  "review_required_fields": [],
+  "processing_mode": "",
+  "overall_review_required": false,
+  "overall_review_reason": ""
+}
+
+---PROMPT END---
+
+================================================
+SECTION 13 — FULL CHANGE MATRIX ASSEMBLY
+================================================
+INJECT IN: After all UCDEs processed — final output step
+MODE: Both Mode 1 and Mode 2
+PREREQUISITE: Section 12 completed for every UCDE
+
+---PROMPT START---
+
+ACTIVE MODE: {{processing_mode}}
+
+You are assembling the complete UCDE Change Matrix from all
+individual row outputs. Every UCDE must appear in the matrix.
+
+Mode 1: Every UCDE from original UCDD must appear —
+        including No Change rows
+Mode 2: Every element discovered must appear —
+        all with Add disposition
+
+ALL UCDE ROW OUTPUTS:
+{{all_ucde_row_outputs}}
+
+ASSEMBLY RULES:
+1. Include every single UCDE — no row may be omitted
+2. Sort rows by disposition priority:
+   First: Review Required
+   Second: Add
+   Third: Update
+   Fourth: Delete
+   Last: No Change
+3. Within each disposition group sort by confidence
+   ascending — lowest confidence first so reviewer
+   sees the most uncertain rows first
+4. Generate summary statistics for dashboard header
+5. Flag any rows where overall_review_required is true
+
+RETURN JSON:
+{
+  "processing_mode": "",
+  "use_case_identifier": "",
+  "use_case_name": "",
+  "matrix_generated_at": "",
+  "output_file_name": "",
+  "summary": {
+    "total_ucdes": 0,
+    "total_add": 0,
+    "total_update": 0,
+    "total_delete": 0,
+    "total_no_change": 0,
+    "total_review_required": 0,
+    "total_material_y": 0,
+    "total_non_compliant": 0,
+    "total_needs_review": 0,
+    "total_compliant": 0
+  },
+  "change_matrix": [
+    {
+      "ucde_name": "",
+      "disposition": "",
+      "change_summary": "",
+      "material_change": "Y/N",
+      "confidence_score": 0,
+      "materiality_rationale": "",
+      "source_evidence": "",
+      "policy_compliance_status": "",
+      "compliance_flags": [],
+      "review_required": false
+    }
+  ]
+}
+
+---PROMPT END---
+
+================================================
+SECTION 14 — MULTI-DIMENSIONAL ELEMENT DECISION
+================================================
+INJECT IN: When multi-dimensional element detected
+MODE: Both Mode 1 and Mode 2
+PREREQUISITE: Element flagged as multi-dimensional
+
+---PROMPT START---
+
+ACTIVE MODE: {{processing_mode}}
+
+A multi-dimensional element has been detected. Present
+both documentation approaches to the human reviewer with
+a recommendation and preview of each approach.
+
+ELEMENT DETAILS:
+- "Use Case Element Name": {{ucde_name}}
+- Detected dimensions: {{detected_dimensions}}
+- Number of dimension values: {{dimension_count}}
+- Are values uniquely calculated per dimension: {{uniquely_calculated}}
+- Source section: {{source_section}}
+
+TWO APPROACHES TO PRESENT TO REVIEWER:
+
+APPROACH 1 — Document All Elements Separately:
+  Create one UCDE row per dimension value
+  Element name includes dimension value as suffix
+  Use when: each value is uniquely calculated
+
+APPROACH 2 — Document Unique Elements Only:
+  Create one UCDE row with BY_DIMENSION notation
+  Description acknowledges dimension without listing values
+  Use when: values are filtered views of same calculation
+
+RECOMMENDATION RULE:
+  If uniquely_calculated = true → recommend Approach 1
+  If uniquely_calculated = false → recommend Approach 2
+  If uncertain → recommend Review Required
+
+RETURN JSON:
+{
+  "is_multi_dimensional": true,
+  "detected_dimensions": [],
+  "recommended_approach": "Approach 1 or Approach 2",
+  "recommendation_rationale": "",
+  "approach_1_preview": {
+    "description": "One row per dimension value",
+    "example_rows": []
+  },
+  "approach_2_preview": {
+    "description": "One row with BY_DIMENSION notation",
+    "example_name": "",
+    "example_description": ""
+  },
+  "escalate_to_human": true,
+  "confidence": 0
+}
+
+---PROMPT END---
+
+================================================
+PIPELINE EXECUTION ORDER REFERENCE
+================================================
+
+MODE 1 PIPELINE (Change Detection):
+  Step 1: Section 0  — System Context (every call)
+  Step 2: Section 4  — Metadata Confirmation (once)
+  Step 3: Section 2  — Change Detection Engine
+  Step 4: Section 3  — Impact Mapping Engine
+          [Early exit if no changes detected]
+  Step 5: For each UCDE in batches of 50-100:
+    Step 5a: Section 5  — Column 1
+    Step 5b: Section 6  — Column 2
+    Step 5c: Section 7  — Columns 3 and 4
+    Step 5d: Section 8  — Column 5
+    Step 5e: Section 9  — Columns 6, 7, 8
+    Step 5f: Section 10 — Columns 9 and 10
+    Step 5g: Section 11 — Columns 11 and 12
+    Step 5h: Section 12 — Change Matrix Row Assembly
+    [If multi-dimensional: Section 14 inserted before 5a]
+  Step 6: Section 13 — Full Change Matrix Assembly
+
+MODE 2 PIPELINE (New Report) — OPTIONAL PLUG-IN:
+  Step 1: Section 0  — System Context (every call)
+  Step 2: Section 4  — Metadata Confirmation (once)
+  Step 3: Section 1  — Element Discovery Engine
+  Step 4: For each discovered element in batches:
+    Step 4a: Section 5  — Column 1
+    Step 4b: Section 6  — Column 2
+    Step 4c: Section 7  — Columns 3 and 4
+    Step 4d: Section 8  — Column 5
+    Step 4e: Section 9  — Columns 6, 7, 8
+    Step 4f: Section 10 — Columns 9 and 10
+    Step 4g: Section 11 — Columns 11 and 12
+    Step 4h: Section 12 — Change Matrix Row Assembly
+    [If multi-dimensional: Section 14 inserted before 4a]
+  Step 5: Section 13 — Full Change Matrix Assembly
+
+TO DISABLE MODE 2:
+  Do not implement Mode 2 Pipeline above.
+  Set processing_mode = "Mode 1" as system default.
+  Sections 0 and 1 through 14 remain in this file.
+  Section 1 simply never gets called.
+  No deletion or modification needed.
+
+================================================
+END OF UCDD_MASTER_PROMPT_LIBRARY.txt
+================================================

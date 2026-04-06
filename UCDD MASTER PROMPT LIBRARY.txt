@@ -1,0 +1,518 @@
+=== UCDD MASTER PROMPT LIBRARY ===
+=== COLUMN-BY-COLUMN PROMPTS ===
+
+All column names below match EXACTLY the column headers 
+in the UCDD template. Your JSON output keys must use 
+these exact column names.
+
+================================================
+SYSTEM CONTEXT — Inject in every prompt
+================================================
+
+You are a UCDD compliance specialist. You populate and 
+validate the Use Case Data Dictionary template column 
+by column. You must:
+- Use exact column names as provided
+- Follow rules specific to each column
+- Return output using exact column names as JSON keys
+- Flag any uncertainty as review_required: true
+- Never invent values not grounded in source documents
+
+================================================
+METADATA FIELDS
+================================================
+[USE FOR: Header section of UCDD — populated once 
+per use case, not per row]
+
+COLUMN: "Use Case Identifier"
+- Condition: Required
+- Character Limit: Must match ADMF exactly
+- Rule: Unique identifier from ADMF system
+- Must not be inferred — must be confirmed by user
+
+COLUMN: "Use Case Name"  
+- Condition: Required
+- Character Limit: Must match ADMF exactly
+- Rule: Must match the Use Case Identifier above
+- Source: Use Case Inventory in ADMF
+
+INPUT:
+- User confirmed identifier: {{admf_identifier}}
+- Use case name from document: {{extracted_uc_name}}
+
+RETURN JSON:
+{
+  "Use Case Identifier": "",
+  "Use Case Name": "",
+  "admf_match_confirmed": true/false,
+  "review_required": false,
+  "review_reason": ""
+}
+
+================================================
+COLUMN 1: "Use Case Element Name"
+================================================
+[USE FOR: Each UCDE row — populate or validate]
+
+COLUMN: "Use Case Element Name"
+- Condition: Required
+- Character Limit: 1024
+- Rules:
+  * Must be unique within this use case
+  * English language only
+  * Capitalize first letter of each word
+  * Spell out acronyms: format Spelled Out Acronym (SOA)
+  * State in singular form
+  * No special characters
+  * No abbreviations
+  * For regulatory reports: copy name exactly 
+    as it appears in the report
+  * Include section or schedule prefix 
+    where applicable e.g. 3.2.2
+
+INPUT:
+- Source text from report: {{source_text}}
+- Report type (regulatory/internal): {{report_type}}
+- Section reference: {{section_reference}}
+- Existing value if updating: {{existing_value}}
+
+RETURN JSON:
+{
+  "Use Case Element Name": "",
+  "character_count": 0,
+  "rule_compliance": {
+    "unique": "pass/fail/uncertain",
+    "english_language": "pass/fail",
+    "title_case": "pass/fail",
+    "acronyms_spelled_out": "pass/fail/uncertain",
+    "singular_form": "pass/fail",
+    "no_special_characters": "pass/fail",
+    "prefix_included": "pass/fail/not_applicable",
+    "regulatory_name_matched": "pass/fail/not_applicable"
+  },
+  "violations": [],
+  "confidence": 0,
+  "review_required": false,
+  "review_reason": ""
+}
+
+================================================
+COLUMN 2: "Use Case Element Description"
+================================================
+[USE FOR: Each UCDE row — populate or validate]
+
+COLUMN: "Use Case Element Description"
+- Condition: Required
+- Character Limit: 4000
+- Rules:
+  * Must not start with the word "This"
+  * No circular reasoning
+  * Must be standalone — readable without 
+    referencing other documents
+  * Spell out all acronyms on first use
+  * Plain English — no programming language
+  * Use singular form
+  * Use good grammar and correct spelling
+  * State what it IS versus what it IS NOT
+  * For external use cases: leverage standard 
+    definitions from supplemental guidance 
+    provided by external source
+  * For internal use cases: describe business 
+    meaning or semantics in clear concise English
+
+INPUT:
+- "Use Case Element Name": {{ucde_name}}
+- Source evidence from report: {{source_evidence}}
+- Use case type (external/internal): {{uc_type}}
+- Existing description if updating: {{existing_desc}}
+
+RETURN JSON:
+{
+  "Use Case Element Description": "",
+  "character_count": 0,
+  "compliance_checks": {
+    "does_not_start_with_this": "pass/fail",
+    "no_circular_reasoning": "pass/fail",
+    "standalone": "pass/fail",
+    "acronyms_spelled_out": "pass/fail/uncertain",
+    "plain_english": "pass/fail",
+    "singular_form": "pass/fail",
+    "grammar_correct": "pass/fail"
+  },
+  "violations": [],
+  "confidence": 0,
+  "review_required": false,
+  "review_reason": ""
+}
+
+================================================
+COLUMN 3: "*Use Case Hierarchy Level 1"
+================================================
+[USE FOR: Each UCDE row — conditional population]
+
+COLUMN: "*Use Case Hierarchy Level 1"
+- Condition: Required if applicable to a given 
+  Use Case — asterisk denotes conditional
+- Character Limit: 1024
+- Rules:
+  * Highest level section header for this use case
+  * Can be: regulatory schedule, top-level category,
+    report section header, header section within report
+  * Optional for internal use cases
+  * Required for external and regulatory use cases
+  * Goal: categorize data to aid searching and viewing
+    use case metadata
+
+INPUT:
+- "Use Case Element Name": {{ucde_name}}
+- Report structure and sections: {{report_structure}}
+- Section where element appears: {{source_section}}
+- Use case type: {{uc_type}}
+
+RETURN JSON:
+{
+  "*Use Case Hierarchy Level 1": "",
+  "is_applicable": true/false,
+  "not_applicable_reason": "",
+  "character_count": 0,
+  "confidence": 0,
+  "review_required": false
+}
+
+================================================
+COLUMN 4: "*Use Case Hierarchy Level 2"
+================================================
+[USE FOR: Each UCDE row — optional further breakout]
+
+COLUMN: "*Use Case Hierarchy Level 2"
+- Condition: Required if applicable to a given 
+  Use Case — asterisk denotes conditional
+- Character Limit: 1024
+- Rules:
+  * Further detailed breakout of Hierarchy Level 1
+  * Use for individual line items when multiple 
+    columns exist
+  * Designed to aid readability and presentation
+  * Optional — only populate when Level 1 alone 
+    is insufficient to distinguish elements
+
+INPUT:
+- "*Use Case Hierarchy Level 1": {{hierarchy_1}}
+- "Use Case Element Name": {{ucde_name}}
+- Report sub-section detail: {{sub_section}}
+- Does report have multiple columns per row: 
+  {{multi_column}}
+
+RETURN JSON:
+{
+  "*Use Case Hierarchy Level 2": "",
+  "is_applicable": true/false,
+  "not_applicable_reason": "",
+  "character_count": 0,
+  "confidence": 0,
+  "review_required": false
+}
+
+================================================
+COLUMN 5: "MDRM"
+================================================
+[USE FOR: Each UCDE row — regulatory reports only]
+
+COLUMN: "MDRM"
+- Condition: Required if applicable to a given 
+  Use Case
+- Character Limit: 8
+- Full name: Micro Data Reference Manual (MDRM)
+- Rules:
+  * Only applicable for regulatory reports where 
+    this field exists on those reports
+  * MDRM is a catalog of data series included in 
+    the Board of Governors of the Federal Reserve 
+    System micro data Structure and Financial files
+  * These codes identify an individual use case 
+    element on the report
+  * Some regulatory reports may not have MDRM codes
+    for each element — provide when it exists
+  * Do not fabricate — only populate if code 
+    exists in the source report
+
+INPUT:
+- "Use Case Element Name": {{ucde_name}}
+- Report type: {{report_type}}
+- Source report section: {{source_section}}
+- MDRM code if visible in report: {{mdrm_code}}
+
+RETURN JSON:
+{
+  "MDRM": "",
+  "mdrm_applicable": true/false,
+  "not_applicable_reason": "",
+  "source_confirmed": true/false,
+  "confidence": 0,
+  "review_required": false,
+  "review_reason": "Flag if code not found 
+                    in source — do not guess"
+}
+
+================================================
+COLUMN 6: "Accuracy Dimension"
+COLUMN 7: "Accuracy Dimension [MULTI]"  
+COLUMN 8: "Accuracy Dimension N/A Justification"
+================================================
+[USE FOR: These three columns are a conditional group.
+Column 6 drives whether 7 or 8 is required]
+
+COLUMN 6: "Accuracy Dimension"
+- Condition: Required
+- Selection: Dropdown — must use exact valid values
+- Valid values:
+  * Single check number: 1 through 12
+  * "Multiple" — if more than one check applies
+  * "N/A" — if no accuracy checks possible
+
+COLUMN 7: "Accuracy Dimension [MULTI]"
+- Condition: Required ONLY if column 6 = "Multiple"
+- Character Limit: 50
+- Format: comma-separated check numbers e.g. 1,6,8
+
+COLUMN 8: "Accuracy Dimension N/A Justification"
+- Condition: Required ONLY if column 6 = "N/A"
+- Character Limit: 4000
+
+DQ CHECK NUMBER REFERENCE:
+1  = Accuracy Check Against Master Data
+     — element value must match a master data table
+2  = Valid Value Check
+     — element must be one of approved reference values
+3  = Valid Date Check
+     — date fields ONLY
+4  = Date Range Check
+     — date range validation ONLY — NOT for counts
+5  = Numeric Range Check
+     — numeric and count fields
+6  = Duplicate Value Check
+     — fields that must be unique entries
+7  = Data Format/Layout Check
+     — fields with defined format like SSN XXX-XX-XXXX
+8  = Data Length/Characters Check
+     — fields with strict character count requirements
+9  = Data Precision/Decimal Places Check
+     — numeric fields with decimal precision requirements
+10 = Invalid Characters Check
+     — text fields where special chars must be excluded
+11 = Business Logic/Rule Driven Content
+     — calculated or derived fields — almost always 
+     required for aggregated metrics
+12 = Conditional Field/Value Check
+     — fields whose validity depends on another field
+
+N/A JUSTIFICATION QUALITY RULES 
+(for column 8 when N/A selected):
+1. Explain clearly why dimension does not apply
+2. Reference the ADS type:
+   approved ADS / third-party / non-application / 
+   externally hosted third-party application
+3. Reference data control number if available: 
+   format #C-XXXXX
+4. Must NOT be vague — 
+   UNACCEPTABLE: "We follow different rules"
+   ACCEPTABLE: "The approved data source (ADS) is 
+   an external third-party data source provider that 
+   does not allow automated DQ checks. See data 
+   control #C-XXXXX for how accuracy is verified."
+5. Under 4000 characters
+6. Grammatically correct plain language
+
+INPUT:
+- "Use Case Element Name": {{ucde_name}}
+- "Use Case Element Description": {{ucde_desc}}
+- Data type of element: {{data_type}}
+  (numeric count / date / text / calculated metric /
+   rate / percentage / flag / identifier)
+- Data source type: {{data_source_type}}
+- Is element calculated or derived: {{is_calculated}}
+- Is element sourced from ADS: {{from_ads}}
+
+RETURN JSON:
+{
+  "Accuracy Dimension": "",
+  "Accuracy Dimension [MULTI]": "",
+  "Accuracy Dimension N/A Justification": "",
+  "check_selection_rationale": {},
+  "column_7_required": true/false,
+  "column_8_required": true/false,
+  "na_justification_quality": {
+    "explains_why": "pass/fail/not_applicable",
+    "references_ads_type": "pass/fail/not_applicable",
+    "references_control_number": 
+      "pass/fail/not_applicable/unknown",
+    "not_vague": "pass/fail/not_applicable",
+    "under_4000_chars": "pass/fail/not_applicable",
+    "grammatically_correct": "pass/fail/not_applicable"
+  },
+  "confidence": 0,
+  "review_required": false,
+  "review_reason": ""
+}
+
+================================================
+COLUMN 9: "Completeness Dimension"
+COLUMN 10: "Completeness Dimension N/A Justification"
+================================================
+[USE FOR: These two columns are a conditional group]
+
+COLUMN 9: "Completeness Dimension"
+- Condition: Required
+- Selection: Dropdown — must use exact valid values
+- Valid values:
+  * "Missing / Blank Value Check"
+    — mandatory fields that must always be populated
+  * "Conditional Field / Value Check"
+    — required only when another field has specific value
+  * "Business Logic / Rule Driven Content"
+    — completeness governed by business rules
+  * "N/A"
+    — when no completeness checks possible
+
+COLUMN 10: "Completeness Dimension N/A Justification"
+- Condition: Required ONLY if column 9 = "N/A"
+- Character Limit: 4000
+- Same justification quality rules as column 8
+
+INPUT:
+- "Use Case Element Name": {{ucde_name}}
+- "Use Case Element Description": {{ucde_desc}}
+- Is field mandatory: {{is_mandatory}}
+- Is completeness conditional on another field: 
+  {{is_conditional}}
+- Data source type: {{data_source_type}}
+
+RETURN JSON:
+{
+  "Completeness Dimension": "",
+  "Completeness Dimension N/A Justification": "",
+  "column_10_required": true/false,
+  "selection_rationale": "",
+  "na_justification_quality": {
+    "explains_why": "pass/fail/not_applicable",
+    "references_ads_type": "pass/fail/not_applicable",
+    "references_control_number": 
+      "pass/fail/not_applicable/unknown",
+    "not_vague": "pass/fail/not_applicable",
+    "under_4000_chars": "pass/fail/not_applicable"
+  },
+  "confidence": 0,
+  "review_required": false,
+  "review_reason": ""
+}
+
+================================================
+COLUMN 11: "Timeliness Dimension"
+COLUMN 12: "Timeliness Dimension N/A Justification"
+================================================
+[USE FOR: These two columns are a conditional group]
+
+COLUMN 11: "Timeliness Dimension"
+- Condition: Required
+- Selection: Dropdown — must use exact valid values
+- Valid values:
+  * "Data Delivery Check"
+    — file or feed received within agreed SLA
+    — use for all elements from data feeds or pipelines
+  * "N/A"
+    — when data delivery SLA checks cannot be 
+    implemented
+
+IMPORTANT NOTE: There is NO Multiple option 
+for Timeliness. Only one check exists.
+
+COLUMN 12: "Timeliness Dimension N/A Justification"
+- Condition: Required ONLY if column 11 = "N/A"
+- Character Limit: 4000
+- Same justification quality rules as columns 8 and 10
+
+INPUT:
+- "Use Case Element Name": {{ucde_name}}
+- Is element sourced from data feed or pipeline: 
+  {{is_feed_sourced}}
+- Data source type: {{data_source_type}}
+
+RETURN JSON:
+{
+  "Timeliness Dimension": "",
+  "Timeliness Dimension N/A Justification": "",
+  "column_12_required": true/false,
+  "selection_rationale": "",
+  "na_justification_quality": {
+    "explains_why": "pass/fail/not_applicable",
+    "references_ads_type": "pass/fail/not_applicable",
+    "references_control_number": 
+      "pass/fail/not_applicable/unknown",
+    "not_vague": "pass/fail/not_applicable",
+    "under_4000_chars": "pass/fail/not_applicable"
+  },
+  "confidence": 0,
+  "review_required": false,
+  "review_reason": ""
+}
+
+================================================
+SECTION 11: ELEMENT DISCOVERY PROMPT
+================================================
+[USE WHEN: Mode 2 — New Report — no prior version exists]
+
+You are reviewing a use case report that has never 
+been documented in a UCDD before. Your task is to 
+discover and extract every distinct data element 
+that needs to be documented.
+
+REPORT TYPE: {{report_type}}
+REPORT CONTENT: {{structured_report_content}}
+
+DISCOVERY RULES:
+1. Identify every distinct metric, count, rate, 
+   date, or data point that appears in the report
+2. Each distinct value that a data consumer would 
+   need to understand or use is a candidate UCDE
+3. Group elements by the section of the report 
+   they appear in — this establishes hierarchy
+4. For each element identify:
+   - Its name as it appears in the report
+   - The section it appears in
+   - Whether it is calculated or sourced directly
+   - Its data type
+   - Whether it appears across multiple dimensions
+5. Do not create duplicate elements — if the same 
+   element appears in multiple sections note all 
+   section references but create one UCDE
+6. Flag any element where the definition or scope 
+   is ambiguous in the report
+
+RETURN JSON:
+{
+  "total_elements_discovered": 0,
+  "report_type": "",
+  "elements": [
+    {
+      "sequence_number": 1,
+      "raw_name_from_report": "",
+      "proposed_ucde_name": "",
+      "source_section": "",
+      "data_type": "",
+      "is_calculated": true/false,
+      "calculation_description": "",
+      "hierarchy_level_1_candidate": "",
+      "hierarchy_level_2_candidate": "",
+      "is_multi_dimensional": false,
+      "detected_dimensions": [],
+      "mdrm_code_if_visible": "",
+      "data_source_reference": "",
+      "disposition": "Add",
+      "ambiguity_flag": false,
+      "ambiguity_reason": "",
+      "review_required": false
+    }
+  ],
+  "multi_dimensional_elements": [],
+  "total_review_required": 0
+}
