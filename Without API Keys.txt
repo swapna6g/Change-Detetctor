@@ -1,0 +1,91 @@
+What You Can Do Right Now Without API Keys
+
+1. Build and Test Everything Except the AI Calls
+All of these steps require zero API keys:
+Steps 1, 2, 3 — Project setup, config loading, reference files. Do these completely.
+Steps 4, 5 — Upload endpoint and upload UI. Build and test with your actual demo files. Confirm files land in the session folder correctly.
+Steps 6 — Build all four parsers. Test them against your actual PPTX, PDF, and Excel files. This is critical — if your PPTX parser does not extract text correctly nothing downstream works. Fix parsing issues now while you have time.
+Steps 13, 14 — Build both Excel writers. Test them with mock data — hardcode a fake list of 6 UCDE rows and confirm the Excel output looks correct and professional.
+Step 15 — Build all the API endpoints for results and download. Test with mock data.
+Steps 16, 17 — Build the entire dashboard results page. Wire it to mock data. Make it look impressive. You can build the full reviewer interaction — Accept, Modify, Reject, progress footer — without any API connection.
+Steps 18 — Build the approval endpoint. Test the file renaming logic.
+Steps 19 — Build the processing page with the spinner and stage tracker.
+
+2. Create Mock API Responses for Testing
+Create a file backend/mock_responses.py that returns hardcoded realistic responses for each AI call. When ANTHROPIC_API_KEY is not set the system uses mock responses instead of real ones. This lets you demo the complete end-to-end flow without keys.
+The mock responses should use your actual UCDE names from the sample files — Closed Allegations, Substantiation Rate, Substantiated Misconduct Allegations, Total Reportable Policy Violations, Count of Opened Matters, Count of Closed Matters. Make the mock responses realistic — show two UCDEs as Update, one as Add, one as Review Required, and two as No Change. This way when the keys arrive you just swap the mock flag off and everything flows through real AI.
+
+3. Polish the Excel Templates
+Open Excel and build all three templates properly right now. This takes two to three hours but pays off massively — your output files look professional on day one. Set up all the conditional formatting, column widths, header colors, and sheet structure. This is completely independent of the API keys.
+
+4. Complete guideline_rules.txt
+Find every [INSERT DESCRIPTION] placeholder in the file and replace it with the actual field description. This takes an hour and is required before any AI call can work properly. Do it now.
+
+5. Test Your Actual Sample Files Through the Parsers
+This is the most valuable use of your waiting time. Run your actual PPTX reports through the parser you build in Step 6. Read the output. Does it capture all the slide content? Are the table values from the slides being extracted? Are the section headings preserved?
+If the parser output is poor the AI comparison will be poor regardless of how good the prompts are. Fix parsing quality now.
+
+What Will Make You Stand Out and Win
+
+Standout Factor 1 — Show a Real Compliance Gap
+Earlier we identified that the DQ check selections in the existing UCDD sample may not be fully appropriate for the data types — for example a count metric having Date Range Check selected. During your demo show the existing UCDD, point out the questionable check selection, then show your system flagging that exact field as Needs Review with a specific guideline rule reference. This is powerful because it proves the system caught a real governance gap in a real enterprise artifact — not a synthetic demo scenario.
+
+Standout Factor 2 — The Confidence Score Visualization
+Most teams will show a table with text values. You will show a table where the confidence column is a colored progress bar — red below 55, amber in the middle, green above 80. Make this bar animated on load. Judges scan visually before they read — the confidence bars immediately communicate which rows need attention without reading anything. This takes 30 minutes to implement but looks genuinely impressive.
+
+Standout Factor 3 — Live Narration of the AI Reasoning
+During the demo when you open the detail panel for a Review Required UCDE, read the materiality rationale aloud and point out that this was written by the AI grounded in the specific guideline rules you embedded. Then say:
+"The system did not just say this is a material change. It cited which section of the report triggered the change, which guideline rule applies, and why the change meets the materiality threshold. Every decision is traceable from the source document to the final UCDD entry."
+That sentence alone demonstrates problem understanding, responsible AI, and technical execution simultaneously.
+
+Standout Factor 4 — The Before and After Comparison
+On your results page add a simple toggle on each UCDE row that shows the existing UCDD value alongside the AI proposed new value. Label them clearly — "Current" in gray and "Proposed" in green or amber depending on change type. Judges immediately understand what changed and why the system is useful. This takes 45 minutes to add to the dashboard and creates a very strong visual moment in the demo.
+
+Standout Factor 5 — Responsible AI Framing in the Presentation
+Prepare one slide specifically about what the AI does not do. Title it "What Our System Does Not Do." List three things:
+The AI does not approve changes — humans do.
+The AI does not write to the UCDD until a human confirms.
+The AI does not invent DQ check numbers — it selects from the governed list of 12.
+This slide takes five minutes to create and directly addresses the Responsible AI judging criterion worth 10 points. Most teams will forget this entirely.
+
+Standout Factor 6 — The Policy Grounding Slide
+Prepare one slide showing the connection between the 29-page guideline document and your system. Show an arrow from a specific guideline rule — for example the naming standard that says spell out acronyms — to a specific prompt section in your UCDD_MASTER_PROMPT_LIBRARY.txt — Section 5 Column 1 naming standards — to a specific output in the Change Matrix showing the compliance check result. This three-step traceability story shows the judges that your system is grounded in the actual governance policy, not just a generic AI document comparison tool.
+
+Standout Factor 7 — Demo Script Timing
+Prepare your demo to run in exactly 4 minutes with a clear structure:
+Minute 1 — The problem. Show the manual process and how long it takes today. Reference the six manual steps from the problem statement slides.
+Minute 2 — The upload and processing. Show the upload page, select your files, click Begin Analysis, watch the stage tracker run. While it runs explain the hybrid rule-based plus AI approach.
+Minute 3 — The results. Walk through the Change Matrix. Point out the Review Required rows at the top. Open one detail panel. Show the confidence score breakdown. Show the before and after comparison toggle.
+Minute 4 — The output and governance. Click Submit Approval. Show the renamed final Excel files. Open the UCDD and show the populated fields with the correct DQ check selections and compliant descriptions.
+Practicing this timing is as important as building the system. A clean 4-minute demo that finishes early is far better than a 7-minute demo that runs out of time.
+
+Standout Factor 8 — One Impressive Number
+Calculate one real statistic from your solution and lead with it in the presentation. Something like:
+"Our system reduces the time to update a UCDD from approximately 4 hours of manual analyst work to under 3 minutes of automated processing with human review."
+Or:
+"Our system enforces 47 distinct policy rules from the 29-page governance guideline on every single UCDE row — automatically."
+The 47 rules number comes from counting all the mandatory standards, valid values, and justification criteria across all 12 columns in your guideline_rules.txt. Count them. Use the real number. Specific numbers are memorable and credible in a way that general claims are not.
+
+Priority Order for the Waiting Period
+Today:
+□ Build Steps 1, 2, 3 — project foundation
+□ Build Steps 4, 5 — upload layer
+□ Build mock_responses.py for testing without API
+
+Tomorrow:
+□ Build Step 6 — parsers (most important)
+□ Test parsers against actual PPTX and Excel files
+□ Fix any parsing issues found
+
+Day after:
+□ Build Steps 13, 14 — Excel writers with mock data
+□ Build Steps 16, 17 — Full dashboard with mock data
+□ Build Steps 18, 19 — Approval and processing page
+
+When API keys arrive:
+□ Connect real Claude calls replacing mock responses
+□ Run full end-to-end test with actual files
+□ Fix any AI response quality issues
+□ Generate and save backup demo output
+□ Practice demo script timing
+The waiting time is actually an advantage. Teams who get keys immediately often rush into AI integration before the foundation is solid. You are building the foundation properly first. When the keys arrive you have one focused task — connect the AI layer to a working system — rather than building everything at once.You are out of free messages until 11:30 PM
