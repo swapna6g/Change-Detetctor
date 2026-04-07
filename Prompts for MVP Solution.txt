@@ -1529,3 +1529,235 @@ After Step 12 — The Change Matrix JSON file is correctly assembled in the sess
 After Step 15 — The Excel files download correctly and open in Excel.
 After Step 16 — The results page shows the table with colored rows.
 After Step 18 — Approval renames the output files correctly.
+
+
+*****************************************************************************************************************************************************************
+
+🚀 UPGRADE PROMPTS (Copy-Paste Ready)
+🔥 Upgrade 1 — Hybrid Change Detection (Rule + AI)
+Prompt: Improve Step 8 (detect_changes)
+
+Modify the existing detect_changes(session_id) function in backend/app.py to introduce a hybrid change detection approach.
+
+Add a deterministic pre-processing step BEFORE calling Claude:
+
+Load both structured reports and extract:
+data_elements
+calculations
+business_rules
+Create a helper function simple_diff(text1, text2):
+Split both texts into lines
+Strip whitespace and lowercase
+Create sets
+Identify:
+added_lines = lines in new but not in old
+removed_lines = lines in old but not in new
+Return:
+{
+"added": list(added_lines),
+"removed": list(removed_lines)
+}
+Run simple_diff on:
+data_elements
+calculations
+business_rules
+Include this deterministic diff output inside the Claude prompt under a new section:
+
+"PRE-DETECTED STRUCTURAL DIFFERENCES (RULE-BASED):
+{json.dumps(diff_output, indent=2)}"
+
+Update the Claude prompt instruction:
+"Use the above rule-based differences as a baseline, and enhance them with semantic understanding. Do not ignore them."
+Add a new field in each change object returned by Claude:
+"change_source": "rule_based" or "ai_inferred"
+After response:
+Validate that at least 70% of rule-based changes are reflected in final output
+If not, log a warning
+
+Do not remove existing functionality. Only enhance.
+
+🔥 Upgrade 2 — UCDE Mapping Accuracy Boost (Normalization + Aliases)
+Prompt: Improve Step 9 (map_to_ucdes)
+
+Modify map_to_ucdes(session_id) in backend/app.py:
+
+Before sending UCDE list to Claude:
+
+Create a helper function normalize_text(text):
+
+Convert to uppercase
+Replace "_" with space
+Remove extra spaces
+For each UCDE name create an enriched object:
+
+{
+"original_name": "CUSTOMER_NAME",
+"normalized_name": "CUSTOMER NAME",
+"aliases": [
+"Customer Name",
+"Full Name",
+"Customer Full Name"
+]
+}
+
+(For hackathon: generate aliases by splitting words and reordering — no AI needed)
+
+Send this enriched UCDE structure to Claude instead of plain list.
+Update prompt instruction:
+
+"For matching, consider normalized names and aliases. Always return the original UCDE name in output."
+
+Add validation:
+If any UCDE is mapped with confidence < 50 → force review_required = True
+Log mismatches where confidence < threshold
+🔥 Upgrade 3 — Batch API Calls (Performance Boost)
+Prompt: Optimize Step 10 (populate_ucde_fields)
+
+Modify populate_ucde_fields(session_id):
+
+Instead of calling Claude once per UCDE:
+
+Group UCDEs into batches:
+
+Batch size = CONFIG["batch_size"] (default 50)
+For each batch:
+Send a single prompt with ALL UCDEs in that batch
+Prompt format:
+
+"Process the following list of UCDEs:
+[
+{ucde_name, disposition, impact_description, existing_row},
+...
+]
+
+Return a JSON array where each element corresponds exactly to one UCDE."
+
+Validate:
+Output count matches input batch size
+If mismatch → fallback to individual calls for that batch
+Merge batch results into all_ucde_outputs
+
+This reduces API calls drastically and improves speed.
+
+🔥 Upgrade 4 — Confidence Score Standardization
+Prompt: Add confidence everywhere
+
+Modify these functions:
+
+detect_changes
+map_to_ucdes
+populate_ucde_fields
+assess_materiality
+Ensure every output object includes:
+"confidence": integer (0–100)
+Add normalization logic:
+If missing → default to 60
+If >100 → cap at 100
+If <0 → set to 0
+Add global helper:
+def normalize_confidence(value):
+try:
+value = int(value)
+return max(0, min(100, value))
+except:
+return 60
+Apply this before saving any JSON output
+🔥 Upgrade 5 — Source Evidence Enhancement (🔥 Demo Booster)
+Prompt: Improve materiality + evidence
+
+Modify assess_materiality():
+
+Update prompt to require structured evidence:
+
+"Return source_evidence in this format:
+{
+'section': 'Data Elements / Calculations / Business Rules',
+'prior_snippet': 'text from prior report',
+'new_snippet': 'text from new report'
+}"
+
+Update backend:
+Store this as structured JSON instead of plain text
+In assemble_change_matrix:
+Convert it to display string:
+"Section: X\nBefore: ...\nAfter: ..."
+🔥 Upgrade 6 — Explainability Layer (Why Button Support)
+Prompt: Add explainability field
+
+Modify assemble_change_matrix():
+
+Add new field in each row:
+"explanation":
+"Disposition: X because Y. Material: Z because A."
+Build explanation using:
+disposition
+impact_description
+materiality_rationale
+Save this in change_matrix.json
+
+Frontend can directly show this in “Why” popup.
+
+🔥 Upgrade 7 — Processing Stages Enhancement
+Prompt: Improve status tracking
+
+Modify update_session_status():
+
+Add new optional field:
+"progress_percentage"
+Update stages mapping:
+
+Parsing → 10
+Structuring → 25
+Change Detection → 40
+Mapping → 55
+Population → 70
+Materiality → 85
+Output → 95
+Complete → 100
+
+Save progress in session.json
+🔥 Upgrade 8 — UI Summary Enhancement
+Prompt: Improve results.html summary
+
+Modify frontend/results.html:
+
+Add two new summary cards:
+Material Changes (Y)
+Average Confidence %
+Add color rules:
+Confidence > 80 → green
+60–80 → amber
+<60 → red
+Add tooltip on confidence:
+"AI confidence score based on semantic and rule-based analysis"
+🔥 Upgrade 9 — Add “Why” Button in UI
+Prompt: Enhance results table
+
+Modify frontend/results.html:
+
+Add new column:
+"Explain"
+Add button:
+<button onclick="showExplanation(row)">Why?</button>
+Create modal popup:
+Show explanation field
+Show confidence
+Show source evidence
+🔥 Upgrade 10 — Retry Logic for Claude Calls (CRITICAL)
+Prompt: Improve call_claude()
+
+Modify call_claude():
+
+Add retry mechanism:
+Max retries = 2
+Retry on:
+timeout
+API error
+empty response
+Add exponential backoff:
+1st retry → wait 1 sec
+2nd retry → wait 2 sec
+Log retry attempts
+If still fails:
+return:
+{"success": False, "error": "api_failed_after_retry"}
