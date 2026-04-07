@@ -1761,3 +1761,155 @@ Log retry attempts
 If still fails:
 return:
 {"success": False, "error": "api_failed_after_retry"}
+
+*************************************************************************************************************
+
+🧩 PROMPT 1 — Add Retry Logic to call_claude()
+
+👉 Paste into Copilot
+
+Enhance the existing call_claude function to support retry logic using CONFIG values.
+
+Requirements:
+- Wrap the API call inside a retry loop
+- Use CONFIG["retry_attempts"] (default 1 if not present)
+- Use CONFIG["retry_delay_seconds"] (default 1 second)
+- If API call fails, retry until max attempts reached
+- Use time.sleep() between retries
+- If all retries fail, return:
+  {"success": False, "error": "max_retries_exceeded"}
+
+- Keep existing functionality unchanged:
+  - Model and max_tokens usage
+  - JSON parsing logic
+  - Return structure
+
+- Add logging:
+  print(f"[Retry Attempt] {attempt+1}/{max_attempts}")
+
+- Import time module if not already present
+
+Do NOT change function signature or existing return format.
+🧩 PROMPT 2 — Enforce Confidence Threshold Globally
+
+👉 This makes your system smarter automatically
+
+Update all places where Claude API responses are processed to enforce confidence threshold from CONFIG.
+
+Requirements:
+- After receiving parsed JSON from call_claude
+- For any object that has "confidence" field:
+    - If confidence < CONFIG["confidence_threshold"]:
+        - Set "review_required" = True
+        - If "review_reason" exists, append:
+          "Low confidence score"
+        - Else create "review_reason": "Low confidence score"
+
+- Apply this logic in:
+  - detect_changes()
+  - map_to_ucdes()
+  - populate_ucde_fields()
+  - assess_materiality()
+
+- Do NOT override existing review_required=True
+- Do NOT modify objects that already have high confidence
+
+- Keep logic simple and safe for missing fields
+
+Do NOT change existing JSON structure.
+🧩 PROMPT 3 — Improve Early Exit Handling
+
+👉 Makes your demo look VERY smart
+
+Enhance detect_changes function to use CONFIG["early_exit_enabled"].
+
+Requirements:
+
+1. After receiving response from Claude:
+   If early_exit is True:
+      - Check if CONFIG["early_exit_enabled"] is True
+      - If enabled:
+          - Save detected_changes.json as usual
+          - Update session status:
+            update_session_status(session_id, "processing", "No Changes Detected")
+          - Return immediately without further processing
+
+2. If early_exit_enabled is False:
+      - Continue normal flow
+
+3. Add logging:
+   print("Early exit triggered - No meaningful changes detected")
+
+Do NOT change existing response structure or file saving logic.
+🧩 PROMPT 4 — Smart Review Threshold (Second Layer)
+
+👉 This is your judge-winning logic
+
+Enhance logic to use CONFIG["review_required_threshold"] as a secondary validation rule.
+
+Requirements:
+
+- For any UCDE object with "confidence_score" or "confidence":
+    If value < CONFIG["review_required_threshold"]:
+        - Set review_required = True
+        - Add review_reason:
+          "Below review threshold"
+
+- Apply this AFTER initial confidence_threshold logic
+
+- Do NOT override existing review_required=True
+- Append to review_reason if already exists
+
+- Apply in:
+  - populate_ucde_fields()
+  - assess_materiality()
+  - assemble_change_matrix()
+
+- Keep logic defensive (handle missing fields safely)
+
+Do NOT modify JSON structure.
+🧩 PROMPT 5 — Add Debug Logging (SUPER IMPORTANT)
+
+👉 Helps you during demo if anything goes wrong
+
+Add debug logging across processing pipeline to print key CONFIG values and decisions.
+
+Requirements:
+
+1. At app startup:
+   print("CONFIG LOADED:", CONFIG)
+
+2. In call_claude:
+   print(f"Using model: {CONFIG['api_model']}, tokens: {CONFIG['api_max_tokens']}")
+
+3. In confidence checks:
+   print(f"Confidence check applied: threshold={CONFIG['confidence_threshold']}")
+
+4. In review threshold:
+   print(f"Review threshold applied: {CONFIG['review_required_threshold']}")
+
+5. In early exit:
+   print("Early exit enabled:", CONFIG["early_exit_enabled"])
+
+Keep logs simple and readable.
+Do NOT use any logging frameworks.
+🧩 PROMPT 6 — Safe Defaults (Important for Stability)
+
+👉 Prevents crashes if config missing
+
+Update all CONFIG access to use safe defaults using dict.get()
+
+Examples:
+- CONFIG.get("retry_attempts", 1)
+- CONFIG.get("confidence_threshold", 60)
+- CONFIG.get("review_required_threshold", 70)
+- CONFIG.get("early_exit_enabled", False)
+
+Apply this across:
+- call_claude
+- detect_changes
+- map_to_ucdes
+- populate_ucde_fields
+- assess_materiality
+
+Do NOT change logic, only make it safe.
