@@ -1913,3 +1913,72 @@ Apply this across:
 - assess_materiality
 
 Do NOT change logic, only make it safe.
+
+
+********************************************************************************
+
+Modify the existing write_ucdd_excel(session_id) function in backend/app.py to generate enriched UCDD output using the LLM instead of directly writing values from ucde_outputs.json.
+
+Requirements:
+
+1. BEFORE writing each UCDE row to Excel:
+   - Iterate through ucde_outputs list
+   - For each UCDE where disposition is "Add" or "Update", call the LLM to generate enriched UCDD fields
+
+2. Build the LLM prompt using:
+   - System context from PROMPT_LIBRARY (SECTION_0)
+   - Column population logic from PROMPT_LIBRARY (SECTION_9)
+   - Include GUIDELINE_RULES
+
+3. The prompt must include:
+   - UCDE Name
+   - Disposition
+   - Impact Description
+   - Existing UCDE values (if available)
+   - Source evidence from new report (data_elements, calculations, business_rules)
+
+4. Add instruction in prompt:
+   "Populate all 12 UCDD columns following guideline rules.
+    For Update disposition, retain unchanged values.
+    Return STRICT JSON with exact column names."
+
+5. Call call_claude(prompt) for each applicable UCDE
+
+6. Parse the JSON response:
+   - If success → use returned values for Excel columns
+   - If failure → fallback to existing row values and mark review_required = True
+
+7. For UCDEs with "No Change":
+   - Do NOT call LLM
+   - Directly carry forward existing values
+
+8. Replace the existing logic that directly maps ucde_outputs → Excel
+   with the enriched LLM output
+
+9. Ensure column mapping remains EXACT:
+   - "Use Case Element Name"
+   - "Use Case Element Description"
+   - "*Use Case Hierarchy Level 1"
+   - "*Use Case Hierarchy Level 2"
+   - "MDR M"
+   - "Accuracy Dimension"
+   - "Accuracy Dimension [MULTI]"
+   - "Accuracy Dimension N/A Justification"
+   - "Completeness Dimension"
+   - "Completeness Dimension N/A Justification"
+   - "Timeliness Dimension"
+   - "Timeliness Dimension N/A Justification"
+
+10. Do NOT change:
+   - Excel formatting logic
+   - File naming
+   - Version history sheet
+
+11. Add basic logging:
+   print(f"Processing UCDE: {ucde_name}, Disposition: {disposition}")
+
+12. Wrap LLM call in try/except:
+   - On error, log and continue processing remaining rows
+
+Goal:
+Transform write_ucdd_excel from a static writer into an AI-driven UCDD generator using prompt library and guideline rules.
