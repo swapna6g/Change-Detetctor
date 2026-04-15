@@ -1,0 +1,42 @@
+✅ 🔥 UPDATED EXECUTIVE SUMMARY
+
+Senior Data Engineer with 13+ years of experience in enterprise data platforms, specializing in data governance, production stability, and large-scale system delivery in regulated environments.
+
+Proven experience in leading cross-functional initiatives, driving automation using Python, and contributing to AI-driven solutions, including L1 automation using enterprise LLM platforms.
+
+Strong in stakeholder management, release coordination, and implementing enterprise standards for scalable, secure, and compliant systems. Currently focused on enabling modern, AI-driven engineering practices and driving team-level adoption.
+
+✅ 🔥 UPDATED CORE STRENGTHS
+Enterprise Data Engineering & Governance
+Python-based Automation & Operational Efficiency
+AI-driven Solutions (LLM, L1 Automation, Orchestration Exposure)
+Product & Delivery Coordination (End-to-End Ownership)
+Production Stability, RCA & Incident Management
+Stakeholder Management & Cross-functional Collaboration
+Team Leadership, Mentoring & Ownership
+Release Management, Compliance & Risk Governance
+
+✅ 🔥 UPDATED WELLS FARGO EXPERIENCE (MOST IMPORTANT)
+
+Wells Fargo — Senior Data Engineer (EPIC MDM)
+May 2019 – Present | Hyderabad
+
+Selected for LOB-level AI initiative (L1 Automation) from a large pool of nominations (~175), contributing to enterprise AI adoption and innovation.
+Working with enterprise LLM platform (Tachyon) and orchestration tools to design AI-driven automation solutions for L1 operations.
+Contributing to solution design and architecture, integrating Python-based automation, ServiceNow workflows, and orchestration tools (Amelia).
+Building Python-based utilities and Swagger interfaces to trigger and manage automation workflows, improving operational efficiency.
+Designed and implemented Python-based automation solutions for monitoring, data validation, and operational efficiency across L1/L3 processes, reducing manual intervention.
+Leveraged automation frameworks and participated in enterprise hackathons, contributing to GenAI and data-driven solutions; recognized as a winner at enterprise level.
+Led production stability initiatives by driving RCA and resolution of high-severity batch and UI incidents, minimizing downstream impact and improving SLA adherence.
+Act as primary SME for enterprise data platform, leading cross-team coordination and supporting critical data flows across multiple domains.
+Led enterprise release coordination including planning, stakeholder alignment, deployment, and post-release validation, ensuring smooth and timely releases.
+Coordinated end-to-end delivery across design, development, QA, and production support, ensuring alignment with business and technical goals.
+Ensured compliance with enterprise governance, audit, and security standards, including PDILI initiatives, data masking (Delphix), and regulatory requirements.
+Re-architected scheduling frameworks (Autosys/JIL) to improve maintainability, reduce operational risk, and stabilize batch execution.
+Implemented and supported BCP automation, actively participating in failover and recovery events to ensure business continuity.
+Provided guidance and support to team members, enabling adherence to standards and ensuring successful delivery of tasks.
+Collaborated with cross-functional teams including engineering, platform, and business stakeholders to drive alignment and resolve dependencies.
+✅ 🔥 SMALL ENHANCEMENTS (ADD IF SPACE ALLOWS)
+Under Technical Skills (optional tweak):
+Add:
+AI/Automation Tools: LLM (Tachyon), Amelia Orchestration, ServiceNow Integration
