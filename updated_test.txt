@@ -52,3 +52,85 @@ Sep 2012 – Jan 2017 | Hyderabad
 Built end-to-end MDM and ETL solutions using Informatica across customer and product domains.
 Developed mappings, workflows, and batch processes for enterprise data platforms.
 Provided production support and performed RCA for data and batch processing issues.
+
+*******************************************************************************************************************************
+
+✍️ UPDATED VERSION (You can copy-paste)
+🔷 PROFESSIONAL SUMMARY (Replace yours)
+
+Senior Data Engineer with 13+ years of experience specializing in Informatica MDM, data governance, and enterprise data platforms in highly regulated environments.
+
+Deep expertise in master data management, match/merge logic, survivorship rules, data quality, and multi-source data integration, supporting critical business functions.
+
+Proven track record in ensuring data consistency, regulatory compliance, and production stability across large-scale enterprise systems.
+
+Alongside core MDM expertise, actively building capabilities in Python and AI-driven automation, with hands-on experience in enterprise LLM-based solutions and operational automation initiatives.
+
+🔷 CORE STRENGTHS (Reorder like this)
+MDM & Data Governance
+Informatica MDM (Customer / Party / Product domains)
+Match & Merge, Survivorship Rules
+Data Quality, Data Standardization & Cleansing
+Data Governance, Compliance & Regulatory Controls
+Enterprise Delivery & Leadership
+End-to-End Delivery (Design → Release → Support)
+Production Stability, RCA & Incident Management
+Release Management, Change Governance
+Cross-team Coordination & Stakeholder Management
+Automation & AI (Value Add)
+Python-based Automation & Utilities
+AI Enablement (LLM Exposure, L1 Automation)
+Orchestration Tools (Amelia, ServiceNow workflows)
+🔷 WELLS FARGO EXPERIENCE (CRITICAL CHANGE)
+
+👉 Right now your first bullets are AI
+👉 That’s the mistake
+
+✅ Replace with this order:
+Wells Fargo – Senior Data Engineer (EPIC MDM)
+
+May 2019 – Present
+
+Act as SME for enterprise MDM platform, managing master data across multiple source systems and domains.
+Designed and implemented match/merge rules, survivorship logic, and data standardization processes to ensure high-quality golden records.
+Led data validation, cleansing, and governance initiatives, improving data consistency and regulatory compliance.
+Managed end-to-end MDM delivery, including design, development, release coordination, and production support.
+Ensured production stability, leading RCA for high-severity incidents and minimizing downstream data impact.
+Worked closely with business and upstream/downstream systems to resolve data issues and align data definitions.
+Led release planning, deployment validation, and post-release monitoring across multiple domains.
+Implemented data masking (Delphix) and PDILL compliance initiatives, ensuring audit readiness.
+Re-architected scheduling frameworks (Autosys/JIL) to improve reliability and reduce operational risk.
+Mentored team members and guided them on MDM best practices and production support processes.
+✅ THEN add your AI layer (keep it, but later)
+Selected for LOB-level AI initiative (L1 Automation) from ~175 nominations.
+Working on enterprise LLM (Tachyon), orchestration tools, and automation workflows.
+Built Python-based utilities and APIs (Swagger) to automate monitoring and validation processes.
+Contributing to AI-driven operational efficiency improvements, reducing manual intervention in L1/L3 support.
+🔷 TECHNICAL SKILLS (Small tweak)
+
+Move this to top:
+
+Data Platforms: Informatica MDM, IDQ, IICS / ETL
+
+Then:
+
+Programming: Python, Java, JavaScript
+
+Then:
+
+AI/Automation: LLM (Tachyon), Amelia, ServiceNow
+
+🔥 ONE LINE THAT WILL DIFFERENTIATE YOU
+
+Add this somewhere (summary or WF role):
+
+“MDM remains my core area of expertise, complemented by ongoing upskilling in Python and AI to enhance data platform efficiency and automation.”
+
+🧠 Final Positioning (What recruiter will feel)
+
+After these changes:
+
+👉 “Strong MDM SME” ✅
+👉 “Understands governance & regulated systems” ✅
+👉 “Not outdated — evolving with AI” ✅
+👉 “Can lead + modernize MDM platform” ✅
