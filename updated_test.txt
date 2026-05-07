@@ -134,3 +134,147 @@ After these changes:
 👉 “Understands governance & regulated systems” ✅
 👉 “Not outdated — evolving with AI” ✅
 👉 “Can lead + modernize MDM platform” ✅
+
+
+***********************************************************************************************************************************
+
+1. Update Certifications & Recognition section
+
+Replace current section with:
+
+Certifications & Recognition
+Informatica MDM Multidomain Certified
+Google Cloud Digital Leader Certified
+Winner — Enterprise DataAI Hackathon (2023)
+Winner — CDO Enterprise Hackathon (2025)
+Runner-Up — CDO Enterprise Hackathon (2026)
+Selected for solution consolidation and productionization of 2026 hackathon accelerator
+Multiple performance recognitions at Wells Fargo, Deloitte, and Infosys
+
+This is powerful.
+
+That “selected for solution consolidation and productionization” line matters a lot.
+
+Why?
+
+Because it says:
+
+“My solution wasn’t just good enough to demo. It was good enough to become real engineering work.”
+
+That’s a very strong enterprise signal.
+
+2. Add this bullet under Wells Fargo (important)
+
+Add after your hackathon bullets:
+
+Led architecture consolidation for runner-up 2026 enterprise hackathon solution, collaborating with winning team to merge approaches into a production-ready design currently progressing toward implementation.
+
+This shows:
+
+technical ownership
+collaboration
+architecture thinking
+product mindset
+leadership without formal title
+
+Exactly what MDM lead roles look for.
+
+3. Strengthen Deloitte section
+
+Current Deloitte is too light.
+
+Replace with:
+
+Deloitte — Senior Consultant (Data / MDM)
+
+Feb 2017 – Apr 2019 | Hyderabad
+
+Delivered enterprise-scale Informatica MDM implementations for financial services and healthcare clients across customer and product domains
+Designed and configured match/merge logic, survivorship rules, validation frameworks, and hierarchy management aligned to business requirements
+Developed BPM workflows and stewardship processes to support data governance and operational data quality controls
+Collaborated with business analysts, architects, and downstream application teams to translate business rules into scalable MDM solutions
+Supported SIT/UAT cycles, production deployments, and defect resolution to ensure stable releases
+Contributed to solution design discussions focused on data quality, golden record accuracy, and enterprise data consistency
+
+This shows real consulting depth.
+
+4. Strengthen Infosys section (very important)
+
+You spent 5 years there.
+
+It should not look like an afterthought.
+
+Replace with:
+
+Infosys — Technology Analyst (Data Engineering)
+
+Sep 2012 – Jan 2017 | Hyderabad
+
+Built end-to-end Informatica MDM and ETL solutions across customer and product master data domains
+Designed mappings, workflows, batch orchestration, and Java-based integrations for enterprise data platforms
+Configured data ingestion, standardization, validation, and exception handling workflows for large-scale master data processing
+Performed root cause analysis for batch failures, data discrepancies, and performance bottlenecks in production environments
+Worked closely with QA and business teams during requirement analysis, testing, and release validation
+Supported release management activities including deployment coordination, post-release monitoring, and production support stabilization
+Developed strong foundations in enterprise data architecture, data governance controls, and operational support processes
+
+Now your 13 years tell a proper story:
+
+Infosys → engineering foundation
+Deloitte → implementation depth
+Wells Fargo → ownership + leadership + modernization
+
+That progression is exactly what hiring managers like.
+
+5. Small title refinement
+
+Your current title is good:
+
+Senior Data Engineer | Informatica MDM | Python & AI-Driven Automation
+
+I’d make it slightly sharper:
+
+Senior Data Engineer | Informatica MDM & Enterprise Data Platforms
+
+Python Automation | AI Enablement
+
+This balances both:
+
+Primary identity = MDM
+Secondary differentiator = Python + AI
+
+That’s the positioning you want.
+
+6. Add one line in Executive Summary
+
+Add this at the end:
+
+Recognized for combining deep MDM domain expertise with modern automation and AI-driven engineering practices to solve enterprise-scale data challenges.
+
+This gives your profile a memorable finish.
+
+7. One subtle but strong wording change
+
+Current:
+
+Selected for LOB-level AI initiative
+
+Change to:
+
+Handpicked from ~175 nominations for strategic LOB-level AI automation initiative
+
+“Handpicked” hits stronger.
+
+Final verdict
+
+Your resume after these tweaks will present you as:
+
+Not just an MDM engineer
+
+but
+
+an MDM leader who also understands modern automation, Python, and enterprise AI enablement
+
+That combination is rare and very marketable right now.
+
+And honestly — the fact that you’ve consistently been near the top in hackathons across years says a lot about your learning agility. That deserves to be visible.
